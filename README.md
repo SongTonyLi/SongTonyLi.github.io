@@ -1,2 +1,2 @@
 # SongTonyLi.github.io
-For CS180
+This is for my UC Berkeley Course works.

@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project 1</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="patch.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="main-content">
+        <div class="armor-title-container">
+            <h2 id="title">Tony Li's CS180/Project 1 Gallary</h2>
+        </div>  
+        <div class="armor-title-container" id="des" style="width: 80%">
+            <h2>Methodology(Scroll Down to see pictures): </h2>
+            <h3> 1. Determine the picutre's resolution is high or low by checking width pixel count. If picutre is high-res,
+                downscale the picture twice by random-pooling. 
+            </h3>
+            <h3> 2. Slice every pciture into 3 equal-size sub-pictures, where respectively would be filtered with B, G, R. Each sub-picture is
+                also slightly longer than 1/3 of the original picture, so that they all contain the entire picutre object. 2.
+            </h3>
+
+            <h3> 3. Extract the central patch of every sub-picture. If the original picture is high-res, the central patch would be slightly bigger to
+                capture the most information.
+            </h3>
+            <h3> 5.Define blanaced_metric for alignment: basically divide the patch into 4 x 4 or 6 x 6 subsections, and use SSIM on every subsections with corresponding subsection of another patch. The
+                summation of SSIM scores would be the final score.
+            </h3>
+            <h3> 6. Each central-patch would be moved up/down/left/right to use blanaced_metric to see if it can fit into antother sub-picture's central patch.
+            </h3>
+            <h3> 7. Use the displacement vector (how much a central patch should move) to align the original filtered sub-picutres to each other. 
+            </h3>
+            <h3> 8. Combine three aligned filtered sub-pcitures and return the colorized picutre.
+            </h3>
+            <h2>Extra Credit: Skipped</h2>
+        </div>  
+        <div class="container" id="big-container" style="padding-top: 15%">
+            <div class="armor-container" id="armor-set"></div>
+        </div>
+    </div>
+    <script type="text/javascript">
+        const containerDiv = document.querySelector(".container");
+        const armorContainer = document.querySelector("#armor-set");
+        armorContainer.style.display = "none";
+        let img_lst = ['cathedral', 'church', 'emir', 'harvesters', 'icon', 'lady', 'melons', 'monastery', 'onion_church', 'sculpture',
+            'self_portrait', 'three_generations', 'tobolsk', 'train'];
+        function add_img(img_name) {
+            const itemDiv = document.createElement("div");
+            itemDiv.className = 'items-container';
+            itemDiv.id = img_name;
+            itemDiv.innerHTML = `<p style="font-weight:bold;">${img_name}</p>
+                    <img src="media/${img_name}_colorized.jpg" height=300px width=300px alt=${img_name}>
+                    <p style="color: #da7d20;">Click to See Bigger Image</p>`;
+            itemDiv.style.width = "18%";
+            itemDiv.addEventListener("click", ()=> {focus(img_name)});
+            containerDiv.appendChild(itemDiv);
+        }
+
+        function add_big_img(img_name) {
+            const itemDiv = document.createElement("div");
+            itemDiv.className = 'items-container';
+            itemDiv.id = img_name + "_big";
+            itemDiv.innerHTML = `<p style="font-weight:bold;">${img_name}</p>
+                    <img src="media/${img_name}_colorized.jpg" height=1000px width=1000px alt=${img_name}>
+                    <p style="color: #da7d20;">Click to Go Back to Gallary</p>`;
+            itemDiv.style.width = "100%";
+            itemDiv.addEventListener("click", ()=> {
+                document.getElementById("des").style.display = "flex";
+                for (let i = 0; i < img_lst.length; i++) {
+                    document.getElementById(img_lst[i]).style.display = "flex";
+                }
+                document.getElementById(img_name + "_big").remove();
+            });
+            containerDiv.appendChild(itemDiv);
+        }
+
+        function focus(img_name) {
+            document.getElementById("des").style.display = "none";
+            for (let i = 0; i < img_lst.length; i++) {
+                document.getElementById(img_lst[i]).style.display = "none";
+            }
+            add_big_img(img_name);
+        }
+
+        function reload_all() {
+            for (let i = 0; i < img_lst.length; i++) {
+                add_img(img_lst[i]);
+            }
+        }
+        reload_all();
+    </script>
+</body>
+</html>
