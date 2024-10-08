@@ -1,0 +1,91 @@
+{
+    "part_1": {
+        "text_des": {
+            "title": "Part 1. Defining Correspondences",
+            "brief": "Manual selcetion of facial features to create correspondences. Images are aligned so that both images have roughly same aspect ratio of face.",
+            "method": "Selection by hand with plt.ginput. Important facial keypoints, such as eyes, eyebrows, nose, nostrils, are selected",
+            "explanation": "Delauney is created by cv.Subdiv2D on selected points. It's pretty interesting to observe that East Asian people have somewhat more planar to look. and even the triangularization is cleaner and no triangles are really thin."
+        },
+        "img_des": {
+            "me.jpg": "Original image of me.",
+            "noam.jpg": "My friend's picture.",
+            "delaunay_me.jpg": "Self-portait with delaunay triangularization",
+            "delaunay_noam.jpg": "My Friend's portait with delaunay triangularization"
+        }
+    },
+    "part_2": {
+        "text_des": {
+            "title": "Part 2. Computing the \"Mid-way Face\"",
+            "brief": "Computing the average face of my face and friend's face.",
+            "method": "Shape Warping + Cross-Dissolve. Some post-processing techniques are used. For example, a small low-pass filter to make the edge blend.",
+            "explanation": "Basically, for each triangle, we do affine transformation + color cross-dissolve. In this part, both original pictures have roughly same frequencies, so the resulting image would not look like one person if close up another if far way. The mid-way image looks very interesting, and it's capturing two person's features. For example, my short hair with his eyes."
+        },
+        "img_des": {
+            "me_noam.jpg": "This is the mid-image of my friend's and my portaits."
+        }
+    }, 
+    "part_3": {
+        "text_des": {
+            "title": "Part 3. The Morph Sequence",
+            "brief": "Morphing sequence from my friend's face to my face.",
+            "method": "Similar to part 2, a list of images are created based on gradually increasing warp ratio and cross-dissolve ratio.",
+            "explanation": "This noteworthy that if cross-dissolve ratio is slightly bigger than warp ratio, the resulting morphing sequence is smoothier."
+        },
+        "img_des": {
+            "loop.gif": "The morphing sequence from my friend's face to my face."
+        }
+    }, 
+    "part_4": {
+        "text_des": {
+            "title": "Part 4. The \"Mean face\" of a population",
+            "brief": "A subset of 30-year old looking Brazilian women are selected, and the average face is computed. Two examples will be shown. 101a and 105a morphed to average face.",
+            "method": "All samples are morped toward one average face. In the end, my self portait would try to morped to this population to observe how gender and ethinicity change.",
+            "explanation": "The average face has really distinctive eyes but it's hard to detect if she's smiling or not. Also, due to repeated morphing, the overall frequencies are reduced on edges, and this why the resulting is blurrier. A small high-pass filter is applied to the average face to make it look better."
+        },
+        "img_des": {
+            "101a.jpg": "One sample from 30-year-old women.",
+            "102a.jpg": "One sample from 30-year-old women.",
+            "103a.jpg": "One sample from 30-year-old women.",
+            "104a.jpg": "One sample from 30-year-old women.",
+            "124a.jpg": "One sample from 30-year-old women.",
+            "101a_tri.jpg": "One sample triangularized.",
+            "124a_tri.jpg": "One sample triangularized,",
+            "avg_face.jpg": "The average face of 30-year-old Brazilian women. Looks like a random stranger you saw in Brazil.",
+            "101a_blur.jpg": "Example 1: image 101a blurred. The original image has too manay high frequencies that average face does not have. Gaussian filtering to make the process smoothier.",
+            "101a_avg.jpg": "Example 1: The mid-way face of 101a and average face.",
+            "101a_avg_seq.gif": "Example 1: The morphing sequence from 101a to the average face.",
+            "avg_101a_seq.gif": "Example 1: The morphing sequence from the average face to 101a.",
+            "105a_blur.jpg": "Example 2: image 105a blurred.",
+            "105a_avg.jpg": "Example 2: The mid-way face of 105a and average face.",
+            "105a_avg_seq.gif": "Example 2: The morphing sequence from 105a to the average face.",
+            "avg_105a_seq.gif": "Example 2: The morphing sequence from the average face to 105a.",
+            "grey_me_blur.jpg": "Special Example: grey scale self-portrait resized to the average face. My face is blurred to reduce frequencies.",
+            "me_avg.jpg": "Special Example: The mid-way face of me and average face. Looks gender-neutral as expected. The eyes still look mine, but the nose is Brazilian",
+            "me_avg_seq.gif": "Special Example: The morphing sequence from my face to the average face.",
+            "avg_me_seq.gif": "Special Example: The morphing sequence from the average face to my face."
+        }
+    }, 
+    "part_5": {
+        "text_des": {
+            "title": "Part 5. Caricatures: Extrapolating from the mean",
+            "brief": "A funny caricature",
+            "method": "Morphing my image to the average image with warp ratio larger than 1.",
+            "explanation": "Both of my face and population mean are \"passport\" faces. Caricature is created by my face extrapolated from mean image. THe result looks funny. Eyse, nose, and mouth are tilted."
+        },
+        "img_des": {
+            "caricature.jpg": "My image extrapolated from the average \"passport/interview\" face."
+        }
+    },
+    "bells": {
+        "text_des": {
+            "title": "Bells and Whistles",
+            "brief": "Gender and ethinicity change",
+            "method": "20-year-old East Asian man to Jewish man and 30-year-old woman ",
+            "explanation": "This is really interesting to see that the morphing average of east asian and jewish is smiliar to someone close to Afghanistan😆. This makes really wonder about the pre-historic human migration."
+        },
+        "img_des": {
+            "loop.gif": "Morphing sequence 1.",
+            "me_avg_seq.gif": "Morphing sequence 2."
+        }
+    }
+}
