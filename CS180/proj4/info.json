@@ -1,0 +1,68 @@
+{
+    "part_1": {
+        "text_des": {
+            "title": "Shoot the Pictures",
+            "brief": "Shoot two or more photographs so that the transforms between them are projective.",
+            "method": "Photos are taken with iPhone camera. The key is to hold the phone steadily and rotate the phone around the phone's centeral axis.",
+            "explanation": "To avoid the situation that object's geometry comes into play and ensure that two photos are in projective relationship."
+        },
+        "img_des": {
+            "main_stacks_left.jpg": "Left Side of Main Stacks library staircase.",
+            "main_stacks_right.jpg": "Right Side of Main Stacks library staircase."
+        }
+    },
+    "part_2": {
+        "text_des": {
+            "title": "Recover Homographies",
+            "brief": "Compute the projective transformation matrix H. Correspondences are found by clicking on object corners in the image. 10 pts are sufficient.",
+            "method": "We need to find a matrix H. Each x, y pair corresponds a point in the original image. x', y' pair represents their warped coordinates.",
+            "explanation": "Direct computation on H is not not easy because we still have variable w's. The best way is to simplify the linear equations by eliminating w's. Of course, the equation doesn't have a precise solution because we are sampling more than needed amount of points. This can be solved by numpy least square or just pseudoinverse."
+        },
+        "img_des": {
+            "computeH.jpg": "Tranformation matrix H derivation."
+        }
+    },
+    "part_3": {
+        "text_des": {
+            "title": "Warp the Images",
+            "brief": "Warp the image toward the reference image",
+            "method": "Inverse warping + Polygon mask created by warped corners",
+            "explanation": "I experimented both forward warping and inverse warping. They have the same run time in transformation, because the computation on matrix inverse is quite minimal. Forward warping creates some holes or thin black strips, because not all warped pixel can occupy all vacant coordinates. This effect can be eliminate by interpolation. However, interpolation is very expensive on large images. Inverse warping is much better in this case, we tracked the destination pixel values by finding their corresponding source pixel values using H inverse. However, we may have some strange artifacts outside of the persepctive. Those artifacts can be easily removed by applying a mask using the polygon formed by 4 warped image corners. Compared to massive interpolation we need in forward warping, inverse warping is much cheaper to post-process."
+        },
+        "img_des": {
+            "main_stacks_left.jpg": "Original Left Side of Main Stacks library staircase.",
+            "warped_left.jpg": "This is warped left side of main stacks. We can see how the handrail's curve shaped toward the one in the reference image.",
+            "main_stacks_right.jpg": "This is the reference image."
+        }
+    },
+    "part_4": {
+        "text_des": {
+            "title": "Image Rectification",
+            "brief": "Rectify the tabletop. We want to see what's drawn on the tabletop in the middle.",
+            "method": "Same method as the previous part, and instead we select 4 corners of the table and manually set the reference warped coordinates to a square.",
+            "explanation": "This transforms the table into a square, which is closer to a top-view from viewer's perspecitve. It's easier to inspect the a planer drawing in this way than side-view."
+        },
+        "img_des": {
+            "room.jpg": "Quite an interesting anchient Chinese painting.",
+            "crop.jpg": "The warped room image is quite large, because the warping ratio is large and also the original image width is very large.",
+            "warped_table_crop.jpg": "We can now see what's going on on the table top. Just a simple ink wash painting. I'm not an artist, really can't tell what the painter's thought is here."
+        }
+    },
+    "part_5": {
+        "text_des": {
+            "title": "Blend the images into a mosaic",
+            "brief": "Warp the images so they're registered and create an image mosaic. The panorama of main stacks staircase will be created. This place is where I started my dream, but also the place where I buried my dream.",
+            "method": "First warp the left part toward the middle. Blend the warped left part and middle part first. Then warp the right part toward blended image, then blend them again.",
+            "explanation": "Inverse warping is used as before. However, if we directly stitch left and right warped images with the middle. It's very probably they are misaligned and have very different color/brightness, because we can't really ensure that our hand was steady while taking the phot and the internal post-processing takes place automatically in our digital cameras. First, we need to align all images. This step is easy, just select 3 corresponding feature points from warped images, and we can determine that how one image should translate in x-axis or y-axis so that they have a perfect overlap. Second, Laplacian stacks are used. Different from previous simple apple-orange blending, we need to change the mask here. The overlapping region should have more transitions (eg. np.linspace) than other regions (eg. all 0's or 1's). If we have a simple uniform transition, the shapes of objects can blend very well but the overlapping region typically looks birghter than other regions."
+        },
+        "img_des": {
+            "left.jpg": "Unwarped left part.",
+            "mid.jpg": "Unwarped middle part.",
+            "right.jpg": "Unwarped right part.",
+            "projected_left.jpg": "Warped left part.",
+            "projected_right.jpg": "Warped right part.",
+            "stitched_left_mid.jpg": "Blend warped left with the originla middle part.",
+            "stitched_left_mid_right.jpg": "Blend first two parts with warped right part."
+        }
+    }
+}
