@@ -12,7 +12,19 @@
     <div class="main-content" id="main_thing">
         <div class="armor-title-container">
             <h1 id="title">Tony Li's CS180/Project 4</h1>
-            <h2>Part 1: IMAGE WARPING and MOSAICING</h2>
+        </div>
+        <div class="items-container" style="width: 70%;">
+            <h3 style="color: rgb(239, 145, 69);">This project contains two parts, Part 1: IMAGE WARPING and MOSAICING, and Part 2: FEATURE MATCHING for AUTOSTITCHING. 
+                The first part implements the homegraphy matrix and inverse warping. All feature points for warping or alignment are manually selected. Then two images are 
+                spliced by Laplacian stacks to create a panorama. The second part concentrates on the implementations of auto-alignments, including feature points extractions and matchings.
+                Then, images are spliced using the same techniques as described in the part 1.
+            </h3>
+            <h3 style="color: rgb(239, 145, 69);">Cool things I've learned from this project: mostly about how complete numpy vectorization can be used and it's fascinating to see the direct runtime speedup and memory efficiency improvement
+                with good vectorizations. For image patch matchings, the L2 distance is basically garbage and not useful at all. Laplacian stacks are not perfect and some high frequencies are lost 
+                during the process. For most images, it doesn't matter too much. However, if the image contains texts, normally in high frequencies, the merged texts are most probably no longer recognizable.
+            </h3>
+            <h3 style="color: rgb(239, 145, 69);">Bells & Whistles: skipped.
+            </h3>
         </div>
     </div>
     <script type="text/javascript">

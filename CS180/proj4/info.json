@@ -1,7 +1,7 @@
 {
-    "part_1": {
+    "part_1_1": {
         "text_des": {
-            "title": "Shoot the Pictures",
+            "title": "Part 1.1: Shoot the Pictures",
             "brief": "Shoot two or more photographs so that the transforms between them are projective.",
             "method": "Photos are taken with iPhone camera. The key is to hold the phone steadily and rotate the phone around the phone's centeral axis.",
             "explanation": "To avoid the situation that object's geometry comes into play and ensure that two photos are in projective relationship."
@@ -11,9 +11,9 @@
             "main_stacks_right.jpg": "Right Side of Main Stacks library staircase."
         }
     },
-    "part_2": {
+    "part_1_2": {
         "text_des": {
-            "title": "Recover Homographies",
+            "title": "Part 1.2: Recover Homographies",
             "brief": "Compute the projective transformation matrix H. Correspondences are found by clicking on object corners in the image. 10 pts are sufficient.",
             "method": "We need to find a matrix H. Each x, y pair corresponds a point in the original image. x', y' pair represents their warped coordinates.",
             "explanation": "Direct computation on H is not not easy because we still have variable w's. The best way is to simplify the linear equations by eliminating w's. Of course, the equation doesn't have a precise solution because we are sampling more than needed amount of points. This can be solved by numpy least square or just pseudoinverse."
@@ -22,9 +22,9 @@
             "computeH.jpg": "Tranformation matrix H derivation."
         }
     },
-    "part_3": {
+    "part_1_3": {
         "text_des": {
-            "title": "Warp the Images",
+            "title": "Part 1.3: Warp the Images",
             "brief": "Warp the image toward the reference image",
             "method": "Inverse warping + Polygon mask created by warped corners",
             "explanation": "I experimented both forward warping and inverse warping. They have the same run time in transformation, because the computation on matrix inverse is quite minimal. Forward warping creates some holes or thin black strips, because not all warped pixel can occupy all vacant coordinates. This effect can be eliminate by interpolation. However, interpolation is very expensive on large images. Inverse warping is much better in this case, we tracked the destination pixel values by finding their corresponding source pixel values using H inverse. However, we may have some strange artifacts outside of the persepctive. Those artifacts can be easily removed by applying a mask using the polygon formed by 4 warped image corners. Compared to massive interpolation we need in forward warping, inverse warping is much cheaper to post-process."
@@ -35,9 +35,9 @@
             "main_stacks_right.jpg": "This is the reference image."
         }
     },
-    "part_4": {
+    "part_1_4": {
         "text_des": {
-            "title": "Image Rectification",
+            "title": "Part 1.4: Image Rectification",
             "brief": "Rectify the tabletop. We want to see what's drawn on the tabletop in the middle.",
             "method": "Same method as the previous part, and instead we select 4 corners of the table and manually set the reference warped coordinates to a square.",
             "explanation": "This transforms the table into a square, which is closer to a top-view from viewer's perspecitve. It's easier to inspect the a planer drawing in this way than side-view."
@@ -48,9 +48,9 @@
             "warped_table_crop.jpg": "We can now see what's going on on the table top. Just a simple ink wash painting. I'm not an artist, really can't tell what the painter's thought is here."
         }
     },
-    "part_5": {
+    "part_1_5": {
         "text_des": {
-            "title": "Blend the images into a mosaic",
+            "title": "Part 1.5: Blend the images into a mosaic",
             "brief": "Warp the images so they're registered and create an image mosaic. The panorama of main stacks staircase will be created. This place is where I started my dream, but also the place where I buried my dream.",
             "method": "First warp the left part toward the middle. Blend the warped left part and middle part first. Then warp the right part toward blended image, then blend them again.",
             "explanation": "Inverse warping is used as before. However, if we directly stitch left and right warped images with the middle. It's very probably they are misaligned and have very different color/brightness, because we can't really ensure that our hand was steady while taking the phot and the internal post-processing takes place automatically in our digital cameras. First, we need to align all images. This step is easy, just select 3 corresponding feature points from warped images, and we can determine that how one image should translate in x-axis or y-axis so that they have a perfect overlap. Second, Laplacian stacks are used. Different from previous simple apple-orange blending, we need to change the mask here. The overlapping region should have more transitions (eg. np.linspace) than other regions (eg. all 0's or 1's). If we have a simple uniform transition, the shapes of objects can blend very well but the overlapping region typically looks birghter than other regions."
@@ -63,6 +63,77 @@
             "projected_right.jpg": "Warped right part.",
             "stitched_left_mid.jpg": "Blend warped left with the originla middle part.",
             "stitched_left_mid_right.jpg": "Blend first two parts with warped right part."
+        }
+    },
+    "part_2_1": {
+        "text_des": {
+            "title": "Part 2.1: Harris Interest Point Detector",
+            "brief": "Select three images suitable for creating a panorama. We dot the image with corner points",
+            "method": "We use Harris Interest Point Detector to get all points that suitable to be a Harris-defined corners. More points are better, because we'll eliminate some unwanted points latter.",
+            "explanation": "Harris Points care about how a little patch of image changes if it wiggles around a point. If the patch looks very different after a small translation, then it's defined as a corner. Otherwise, it's not. Even sky is covered with points, and this is due to the fact that harris points only focus on the a small patch but not the global image." 
+        },
+        "img_des": {
+            "left1.jpg": "Left side of a street.",
+            "harris_dotted_street_left1.jpg": "Left side of a street with harris interest points.",
+            "mid1.jpg": "Middle of a street",
+            "harris_dotted_street_mid1.jpg": "Middle of a street with harris interest points.",
+            "right1.jpg": "Right side of a street.",
+            "harris_dotted_street_right1.jpg": "Right side of a street with harris interest points."
+        }
+    },
+    "part_2_2": {
+        "text_des": {
+            "title": "Part 2.2: Adaptive Non-Maximal Suppression",
+            "brief": "Select 500 samples from harris points. Selected points should be representative and also spatially evenly distributed.",
+            "method": "ANMS is a method proposed by paper MOPS, and the basic logic is to select points in a order that we don't select near neighbors of a point over and over agian.",
+            "explanation": "If we only select points that have highest Harris responses, most points would be scattered around high-frequency objects, such as tree leaves and grass. Overly clustered points are not representative and can lead to severe under-fitting issues, becasue of course only a small region of image can be useful." 
+        },
+        "img_des": {
+            "anms_dotted_street_left1.jpg": "Left side of a street with harris interest points after applying ANMS. Clearly more spatically well-distributed representative points stand out.",
+            "anms_dotted_street_mid1.jpg": "Middle of a street with harris interest points after applying ANMS. Clearly more spatically well-distributed representative points stand out.",
+            "anms_dotted_street_right1.jpg": "Right side of a street with harris interest points after applying ANMS. Clearly more spatically well-distributed representative points stand out."
+        }
+    },
+    "part_2_3": {
+        "text_des": {
+            "title": "Part 2.3: Feature Descriptor extraction",
+            "brief": "Generate a 40x40 patch centered at each ANMS point. Then rescale it to 8x8.",
+            "method": "Simple numpy indexing and cv2 rescale method.",
+            "explanation": "We need to get very patch ready for the next-stage matching process. 40x40 patches are too large and very time consuming to work with if we use them for matching. Recaling to 8x8 not only reduce the data size but also preserve lower freqeuncies so that patches are more invariant to small translations and rotations."
+        },
+        "img_des": {
+            "street_left_1_patch_17.jpg": "Patch of 17th dot of street image",
+            "street_left_1_patch_17_8x8.jpg": "Rescaled patch 17"
+        }
+    },
+    "part_2_4": {
+        "text_des": {
+            "title": "Part 2.4: Feature Matching",
+            "brief": "This part we further reduce amount of points with nearest neighbor and get perfect matches with RANSAC. We first use Lowe's method to find nearest neighbors. Then, use RANSAC to match points from two sets of corner points.",
+            "method": "In 20,000 loops, we randomly select 4 corner points without replecement from the one image, and compute the homography matrix, and count how many corner points(inliers) in the other image are hit in terms of distance. Points not hit are outliers, which are bad for least square methods. We compute the final homography matrix after all loops based on the best run with the most amount of inliers.",
+            "explanation": "This is a robust method to not only generate a good homography matrix but also the good matching points. The largest inliers set in the first image can be perfectly matched. In order to make the patch comparisons more successful, the scikit's structural similarity is used. Simple L2 distance is way too bad because it's extremely sensitive to texture change. Lowe's method is also used, we compare the point's first/best nearest neigbor with the second nearest neighbor. If their scores are too close, which means that neither is good enough so we don't count the point as an inlier."
+        },
+        "img_des": {
+            "street_left1_patch_237.jpg": "This patch from left1.jpg is pefectly matched to the patch from mid1.jpg using only nearest neighbors",
+            "street_mid1_patch_237.jpg": "This patch from mid1.jpg is pefectly matched to the patch from left1.jpg using only nearest neighors",
+            "street_left1_NN_matched_50.jpg": "By nereast neigbors with SSIM, we can already see there are a lot of points that are good for matching",
+            "street_mid1_NN_matched_50.jpg": "We can see that there already exist huge amount of correct matchings",
+            "street_left_1_ransac_matched.jpg": "After ransac, all correct matches are found.",
+            "street_mid_1_ransac_matched.jpg": "After ransac, all correct matches are found."
+        }
+    },
+    "part_2_5": {
+        "text_des": {
+            "title": "Part 2.5: Creating panorama",
+            "brief": "We create panorama with the same method described in part 1 using feature points and homography matrix we found in the previous part",
+            "method": "Most of this part is same as part 1.5, but the alignment is not manual anymore. We forward warp the feature points found in the original image and warp them to points in the warped image",
+            "explanation":"After warping one image, it is not ready for merging with another image, because the objects are misaligned. However, we can use warped feature points in the warped image and the feature points from another image to calculate the translation vector needed to move one image."
+        },
+        "img_des": {
+            "warpedStreetLeft1.jpg": "Warped left side of the street",
+            "warped_street_left_1_ransac_matched.jpg": "Warped left side of the street with feature points",
+            "street1_left_mid.jpg": "Merged left side of the street with the middle part",
+            "street1_mid_right.jpg": "Using this auto-alignment method, we can get another merged image with middle and right sides of the street."
         }
     }
 }
