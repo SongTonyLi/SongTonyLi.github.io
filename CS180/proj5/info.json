@@ -1,0 +1,281 @@
+{
+    "part_A_0": {
+        "text_des": {
+            "title": "Part 0: SetUp",
+            "brief": "We use two-stage diffusion model DeepFloyd/IF-I-XL-v1.0.",
+            "method": "Download the gated model from HuggingFace, and generate three images based on prompts.",
+            "explanation": "Seed: 8888788"
+        },
+        "img_des": {
+            "diffusion_snowy_mountain.png": "Prompt: an oil painting of a snowy mountain village. The model generates correct image with not clear hallucinations and reflects the correct content. However, the image is not oil-painting, and mmore like animes.",
+            "diffusion_man_hat.png": "Prompt: a man wearing hat; Model. The model generated a perfect image.",
+            "diffusion_rocket_ship.png": "Prompt: a rocket ship; Model. The model's generation is good and even generates cloud to show the movement of the space ship."
+        }
+    }, 
+    "part_A_1_1": {
+        "text_des": {
+            "title": "Part 1.1: Implementing the Forward Process",
+            "brief": "We create noised images with noise scheduling to create input data for the diffusion model",
+            "method": "The forward pass is adding certain amount of Gaussian noises to the original clear images.",
+            "explanation": "The UNET based diffusion model iteratively remove the noises from pure noises and the forward passes we reverse the process by creating sequence of gradually noised images."
+        },
+        "img_des": {
+            "campanille.png": "The original image of Berkeley campanille/ sather tower. Resized to fit into model input.",
+            "campanille_noise_250.png": "The image of campanille with noise level 250. The image is still recoginizable as the Berkley tower by human eye inspection.",
+            "campanille_noise_500.png": "The image of campanille with noise level 500. The image is recoginizable as a tower by human eye inspection.",
+            "campanille_noise_750.png": "The image of campanille with noise level 750. The image is recoginizable as an elongated object by human eye inspection."
+        }
+    },
+    "part_A_1_2": {
+        "text_des": {
+            "title": "Part 1.2: Classical Denoising",
+            "brief": "We use the classical Gaussian blur to attempt to denoise the noised images.",
+            "method": "We apply Gaussian convolution kernels to noised images.",
+            "explanation": "The Gaussian blur is a low pass filter to filter out the infrequently appearing random noises. Some random noise dots are able to be smoothed out. However, this is not working for our noised images, because noises exist in both low and high frequencies, and even original unoised parts' information is lost by this denoiser."
+        },
+        "img_des": {
+            "campanille_noise_250_gaussian_blur.png": "The image of campanille with noise level 250 and Gaussian blurred. The classical denoiser failed to generate uniform and smooth colors for different objects, and random noises still persist.",
+            "campanille_noise_500_gaussian_blur.png": "The image of campanille with noise level 500 and Gaussian blurred. The classical denoiser failed to generate uniform and smooth colors for different objects, and random noises still persist.",
+            "campanille_noise_750_gaussian_blur.png": "The image of campanille with noise level 750 and Gaussian blurred. The classical denoiser failed to generate uniform and smooth colors for different objects, and random noises still persist."
+        }
+    },
+    "part_A_1_3": {
+        "text_des": {
+            "title": "Part 1.3: One-Step Denoising",
+            "brief": "We use the diffusion model as a denoiser, and denoise in one step.",
+            "method": "The model we are using is noise-estimation based, so we can remove the estimated noise from the noised images.",
+            "explanation": "The model uses text-embedding as input, so we can just pass 'a high quality photo' embedding into the model along with the noised images. The images are noised at different levels so we also need rescaled the generated images back with alpha_cumprod coefficient."
+        },
+        "img_des": {
+            "revert_formula.jpg": "Induced from the original fundamental noising formula, we can get the estimated images from the estimated noises and noised image.",
+            "campanille.png": "The original image of Berkeley campanille/ sather tower.",
+            "campanille_noise_250.png": "The image of campanille with noise level 250.",
+            "denoised_from_noise_250.png": "One step denoised image from noise level 250. The result is perfectly aligned with the original image with clear and visible background objects.",
+            "campanille_noise_500.png": "The image of campanille with noise level 500.",
+            "denoised_from_noise_500.png": "One step denoised image from noise level 500. The result is good and can be recoginizable as berkeley tower. However, some minor features, e.g. red roof top, are lost.",
+            "campanille_noise_750.png": "The image of campanille with noise level 750.",
+            "denoised_from_noise_750.png": "One step denoised image from noise level 750. The result is suboptimal despite generating a tower. Both the tower color and style are changed significantly. The relative spatial structures are correct."
+        }
+    },
+    "part_A_1_4": {
+        "text_des": {
+            "title": "Part 1.4: Iterative Denoising",
+            "brief": "We use the diffusion model as a denoiser and denoise in multiple steps.",
+            "method": "We iteratively feed the slightly denoised images back to the diffusion model until we get a good one.",
+            "explanation": "One-step denoiser creates rather blurry image and most of the time fails to do the job. If we loosen the noises a little bit in multiple steps, it is safer to get a good image."
+        },
+        "img_des": {
+            "campanille.png": "The original image of Berkeley campanille/ sather tower.",
+            "original_noisy_campanile.png": "The heavily noised image of Berkeley campanile.",
+            "noisy_campanile_noise_690.png": "Noisy campanile at t=690.",
+            "noisy_campanile_noise_540.png": "Noisy campanile at t=540.",
+            "noisy_campanile_noise_390.png": "Noisy campanile at t=390.",
+            "noisy_campanile_noise_240.png": "Noisy campanile at t=240.",
+            "noisy_campanile_noise_90.png": "Noisy campanile at t=90.",
+            "iteratively_denoised_campanile.png": "Iteratively denoised campanile. The image is rich in details, and even tree leaves and windows are clearly visible. However, the tower style and color are changed.",
+            "iterative_denoise.gif": "Animated iterative denoising.",
+            "one_step_denoised_campanile.png": "One-step denoised campanile. The image is blurry and lacks of details.",
+            "gaussian_blurred_Campanile.png": "Classical Gaussian blur is not able to handle heavily noised images, and the resulting image is noisy and blurry."
+        }
+    },
+    "part_A_1_5": {
+        "text_des": {
+            "title": "Part 1.5: Diffusion Model Sampling",
+            "brief": "We use the diffusion model as an iterative denoiser to generate images with prompts.",
+            "method": "Similary to the previous part, but feed initially purely noised images and different prompts.",
+            "explanation": "Guided by the prompt, the model selectively remove certain amount of noises to make the noisy image converge to the prompt-like image. However, this direct generations out of nothing is not stable, and sometimes generations are not comprehensible."
+        },
+        "img_des": {
+            "gen_1.png": "prompt: 'a high quality photo'; result: looks like forest but not recoginizable.",
+            "gen_2.png": "prompt: 'a high quality photo'; result: looks a man in water but not recoginizable.",
+            "gen_3.png": "prompt: 'a high quality photo'; result: good picture of a seashore.",
+            "gen_4.png": "prompt: 'a high quality photo'; result: good picture of a woman in water.",
+            "gen_5.png": "prompt: 'a high quality photo'; result: not identifiable."
+        }
+    },
+    "part_A_1_6": {
+        "text_des": {
+            "title": "Part 1.6: Classifier-Free Guidance (CFG)",
+            "brief": "We use combined noise estimations from unconditioned noises and conditioned noises to generate images",
+            "method": "We use the classifer-free guidance to add scaled unconditioned (prompted with empty string) generated images to the condtionally generated images.",
+            "explanation": "See https://sander.ai/2022/05/26/guidance.html"
+        },
+        "img_des": {
+            "cfg_1.png": "prompt: 'a high quality photo', guidance scale = 7; result: good picture of a man standing in front of canyon.",
+            "cfg_2.png": "prompt: 'a high quality photo', guidance scale = 7; result: good picture of a playing boy in red.",
+            "cfg_3.png": "prompt: 'a high quality photo', guidance scale = 7; result: good picture of a married couple.",
+            "cfg_4.png": "prompt: 'a high quality photo', guidance scale = 7; result: good picture of a seashore.",
+            "cfg_5.png": "prompt: 'a high quality photo', guidance scale = 7; result: good picture of a man standing in ocean."
+        }
+    },
+    "part_A_1_7": {
+        "text_des": {
+            "title": "Part 1.7: Image-to-image Translation",
+            "brief": "We visualize how the diffusion model gradually edit the image to align with real world images",
+            "method": "We use iterative CFG to denoise real images noised with different levels to see how it converges to the real image manifold.",
+            "explanation": "We take a real image, add noise to it, and then denoise. This effectively allows us to make edits to existing images. The more noise we add, the larger the edit will be. Three examples will be presented, small edits on the landmark campanile, a cat, and intricate electronic internals of steam deck."
+        },
+        "img_des": {
+            "campanile_sde_1.png": "Campnille SDE at start index 1",
+            "campanile_sde_3.png": "Campnille SDE at start index 3",
+            "campanile_sde_5.png": "Campnille SDE at start index 5",
+            "campanile_sde_7.png": "Campnille SDE at start index 7",
+            "campanile_sde_10.png": "Campnille SDE at start index 10",
+            "campanile_sde_20.png": "Campnille SDE at start index 20",
+            "campanille.png": "The original image of Berkeley campanille/ sather tower.",
+            "cat_sde_1.png": "Cat SDE at start index 1",
+            "cat_sde_3.png": "Cat SDE at start index 3",
+            "cat_sde_5.png": "Cat SDE at start index 5",
+            "cat_sde_7.png": "Cat SDE at start index 7",
+            "cat_sde_10.png": "Cat SDE at start index 10",
+            "cat_sde_15.png": "Cat SDE at start index 15",
+            "cat_sde_20.png": "Cat SDE at start index 20",
+            "cat.png": "The original image of my cat.",
+            "steam_deck_sde_1.png": "Steam Deck SDE at start index 1",
+            "steam_deck_sde_3.png": "Steam Deck SDE at start index 3",
+            "steam_deck_sde_5.png": "Steam Deck SDE at start index 5",
+            "steam_deck_sde_7.png": "Steam Deck SDE at start index 7",
+            "steam_deck_sde_10.png": "Steam Deck SDE at start index 10",
+            "steam_deck_sde_15.png": "Steam Deck SDE at start index 15",
+            "steam_deck_sde_20.png": "Steam Deck SDE at start index 20",
+            "steam_deck_sde_25.png": "Steam Deck SDE at start index 25",
+            "steam_deck.png": "The original Steam Deck internal electronic devices."
+        }
+    },
+    "part_A_1_7_1": {
+        "text_des": {
+            "title": "Part 1.7.1: Editing Hand-Drawn and Web Images",
+            "brief": "Similar to the previous part but apply to hand-drawn and web images",
+            "method": "Same method as described above.",
+            "explanation": "Three examples will be presented: the Bloodborne cartoon, a handdrawn dancing man with a hat, and a handdrawn firing tank."
+        },
+        "img_des": {
+            "bloodborne_sde.jpg": "Bloodborne cartoon SDE series",
+            "bloodborne.png": "The original bloodborne cartoon image",
+            "handdrawn_man_sde.jpg": "dancing man SDE series",
+            "handdrawn_man.png": "The original handdrawn dancing man with a hat image",
+            "handdrawn_tank_sde.jpg": "tank SDE series",
+            "handdrawn_tank.png": "The original handdrawn firing tank image"
+        }
+    },
+    "part_A_1_7_2": {
+        "text_des": {
+            "title": "Part 1.7.2: Inpainting",
+            "brief": "We block out a part of image and let the fiddusion model to fill in the hole.",
+            "method": "Same method as above but include a mask on the image.",
+            "explanation": "Three examples will be presented: the Campanile, the bloodborne cartoon, and a singer."
+        },
+        "img_des": {
+            "campanile_mask.jpg": "The original image of Berkeley campanille and masked out region.",
+            "campanile_inpaint.png": "Inpainted campanile, the top of tower is replaced to a cap like architechture.",
+            "bloodborne_mask.jpg": "The original cartoon of bloodborne and the mask.",
+            "bloodborne_inpaint.png": "Inpainted bloodborne cartoon, the boy on the left changed his head.",
+            "singer_mask.jpg": "The original picture of a singer and the mask.",
+            "singer_inpaint.png": "Inpainted singer withc swapped singer head."
+        }
+    },
+    "part_A_1_7_3": {
+        "text_des": {
+            "title": "Part 1.7.3: Text-Conditional Image-to-image Translation",
+            "brief": "We transform the original image as close as possible to a different prompt.",
+            "method": "Same method as above but include a different prompt.",
+            "explanation": "Three examples will be presented: the Campanile to a rocket ship, a cat to a rocket ship, and the steam deck to a rocket ship."
+        },
+        "img_des": {
+            "campanile_rocket.jpg": "Campanile with the rocket ship prompt",
+            "cat_rocket.jpg": "Cat with the rocket ship prompt",
+            "steam_deck_rocket.jpg": "Steam deck with the rocket ship prompt"
+        }
+    },
+    "part_A_1_8": {
+        "text_des": {
+            "title": "Part 1.8: Visual Anagrams",
+            "brief": "We create visual illusions that looks like one thing and another thing if flipped upside down.",
+            "method": "We create the noise estimations by combining two diffusion noise signals from two different prompts.",
+            "explanation": "If we numerically control the amount of signals that exist in the one direction and keep some other singals in other directions, the diffusiion model will try two merge two signals into one good image. Interestingly, images with humanly objects, e.g. skull, old man, girl, typically have far larger signals than other signals, and it is appropriate to suppress them more by setting coefficient to around 25%."
+        },
+        "img_des": {
+            "campfire_man.png": "an oil painting of people around a campfire",
+            "man_campfire.png": "an oil painting of an old man",
+            "waterfall_man.png": "a lithograph of waterfalls",
+            "man_waterfall.png": "a man wearing a hat",
+            "man_skull.png": "a man wearing a hat",
+            "skull_man.png": "a lithograph of a skull"
+        }
+    },
+    "part_A_1_9": {
+        "text_des": {
+            "title": "Part 1.9: Hybrid Images",
+            "brief": "We create visual illusions that looks like one thing close up and another thing far away.",
+            "method": "We create the noise estimations by combining two diffusion noise signals from two different prompts.",
+            "explanation": "If we numerically control the amount of signals that exist in the higher frequencies and keep some other singals in lower frequencies, the diffusiion model will try two merge two signals into one good image. Interestingly, images with humanly objects, e.g. skull, old man, girl, typically have far larger signals than other signals, and it is appropriate to suppress them more by setting coefficient to around 25%."
+        },
+        "img_des": {
+            "waterfall_skull.png": "Close up: a lithograph of waterfall; Far away: a lithograph of a skull.",
+            "waterfall_worldmap.png": "Close up: a lithograph of waterfall; Far away: a lithograph of world map.",
+            "village_cat.png": "Close up: an oil painting of a snowy mountain village; Far away: a lithograph of a cat."
+        }
+    },
+    "part_B_1": {
+        "text_des": {
+            "title": "Part 1: Training a Single-Step Denoising UNet",
+            "brief": "We train a UNet on MNist datastet to denoise the Gaussian noised digits.",
+            "method": "We first set up a noise scheduler to noise digits and denoise them by training a UNet on noise level with sigma=0.5.",
+            "explanation": "UNet is a powerful and efficient architechture to do the diffusion and even a little neural net is able to handle MNist dataset easily."
+        },
+        "img_des": {
+            "digit_noise_levels.jpg": "Digit 3 at different noise levels.",
+            "denoiser_epochs.jpg": "The denoised digits at epoch=0 and epoch=5.",
+            "denoiser_training_loss.png": "The training loss graph of UNet for images with noise level 0.5",
+            "out_of_dist.jpg": "Unet denoiser performances on even out-of noise level digits."
+        }
+    },
+    "part_B_2_1": {
+        "text_des": {
+            "title": "Part 2.1: Training a Time Condtioned Diffusion Model",
+            "brief": "We train a UNet-based Diffusion model on MNist datastet to generate handwriting digits.",
+            "method": "We first set up a noise scheduler to noise digits and denoise them by training a UNet on noise level with sigma=0.5.",
+            "explanation": "UNet is a powerful and efficient architechture to do the diffusion and even a little neural net is able to handle MNist dataset easily."
+        },
+        "img_des": {
+            "digit_noise_levels.jpg": "Digit 3 at different noise levels.",
+            "denoiser_epochs.jpg": "The denoised digits at epoch=0 and epoch=5.",
+            "denoiser_training_loss.png": "The training loss graph of UNet for images with noise level 0.5",
+            "out_of_dist.jpg": "Unet denoiser performances on even out-of noise level digits."
+        }
+    },
+    "part_B_2_2": {
+        "text_des": {
+            "title": "Part 2.2: Training a Time Condtioned Diffusion Model",
+            "brief": "We train a time condioned UNet-based Diffusion model on MNist datastet to generate handwriting digits.",
+            "method": "We train a UNet that is able to denoise the noisy image a little in a step by enabling time conditioning, represented by two fully connected blocks, in the UNet.",
+            "explanation": "Direct one step denoising is not stable and noisy images are denoised to be still noisy images. The time conditioned approach allows iterative denoising to converge to a more stable and accurate result."
+        },
+        "img_des": {
+            "tunet_epoch0.png": "At epoch 0, generated digits by the time conditioned UNet.",
+            "tunet_epoch5.png": "At epoch 5, generated digits by the time conditioned UNet.",
+            "tunet_epoch10.png": "At epoch 10, generated digits by the time conditioned UNet.",
+            "tunet_epoch15.png": "At epoch 15, generated digits by the time conditioned UNet.",
+            "tunet_epoch20.png": "At epoch 20, generated digits by the time conditioned UNet.",
+            "tunet_training_loss.png": "The training loss plot of the time contioned UNet."
+        }
+    },
+    "part_B_2_3": {
+        "text_des": {
+            "title": "Part 2.3: Training a Class Condtioned Diffusion Model",
+            "brief": "We train a class condioned UNet-based Diffusion model on MNist datastet to generate handwriting digits.",
+            "method": "We train a UNet that is able to denoise the noisy image a little in a step by enabling time conditioning, represented by two fully connected blocks, in the UNet. To make the direction of generation clearer, we input the classes of digits we are looking for as guidacnes.",
+            "explanation": "Direct one step denoising is not stable and noisy images are denoised to be still noisy images. The class conditioned approach allows iterative denoising to converge to a more stable and accurate result that matches our classes."
+        },
+        "img_des": {
+            "cunet_epoch0.png": "At epoch 0, generated digits by the class conditioned UNet.",
+            "cunet_epoch5.png": "At epoch 5, generated digits by the class conditioned UNet.",
+            "cunet_epoch10.png": "At epoch 10, generated digits by the class conditioned UNet.",
+            "cunet_epoch15.png": "At epoch 15, generated digits by the class conditioned UNet.",
+            "cunet_epoch20.png": "At epoch 20, generated digits by the class conditioned UNet.",
+            "cunet_training_loss.png": "The training loss plot of the class contioned UNet."
+        }
+    }
+
+
+}

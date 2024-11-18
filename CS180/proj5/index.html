@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project 5</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="patch.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body style="background-color: white;">
+    <div class="main-content" id="main_thing">
+        <div class="armor-title-container">
+            <h1 id="title">Tony Li's CS180/Project 5</h1>
+        </div>
+        <div class="items-container" style="width: 70%;">
+            <h3 style="color: rgb(239, 145, 69);">This project contains two parts, Part A: The Power of Diffusion Models, and Part B: Diffusion Models from Scratch. 
+                The first part plays around the state of art diffusion model, and the second part builds diffusion models. 
+            </h3>
+            <h3 style="color: rgb(239, 145, 69);">Bells & Whistles: skipped.
+            </h3>
+        </div>
+    </div>
+    <script type="text/javascript">
+        async function fetchJSONData(json_file_name) {
+            try {
+                const response = await fetch(json_file_name);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                return await response.json();
+            } catch (error) {
+                console.error("Unable to fetch data:", error);
+            }
+        }
+
+        async function main() {
+            const parts = await fetchJSONData("./info.json");
+            let main_content_div = document.querySelector("#main_thing");
+
+            for (const part_name in parts) {
+                const part = parts[part_name];
+
+                const title_div = document.createElement("div");
+                title_div.className = "armor-title-container";
+                title_div.style.width = "70%";
+
+                const title_h2 = document.createElement("h2");
+                title_h2.textContent = part["text_des"]["title"];
+                title_div.appendChild(title_h2);
+                main_content_div.appendChild(title_div);
+                
+                const gallery_div = document.createElement("div");
+                gallery_div.className = "container";
+                gallery_div.style.paddingTop = "12%";
+
+                const part_des = document.createElement("div");
+                part_des.id = part_name + "_des";
+                part_des.className = "items-container";
+                part_des.style.width = "70%";
+                part_des.innerHTML = `
+                    <p>Brief Description</p>
+                    <h3>${part["text_des"]["brief"]}</h3>
+                    <p>Methodology</p>
+                    <h3>${part["text_des"]["method"]}</h3>
+                    <p>Explanation</p>
+                    <h3>${part["text_des"]["explanation"]}</h3>`;
+                
+                gallery_div.appendChild(part_des);
+                load_part(gallery_div, part["img_des"], part_name);
+                main_content_div.appendChild(gallery_div);
+            }
+        }
+
+        function load_part(containerDiv, img_des, part_name) {
+            function add_img(img_name, part_name) {
+                const itemDiv = document.createElement("div");
+                itemDiv.className = 'items-container';
+                itemDiv.id = part_name + img_name;
+                itemDiv.innerHTML = `
+                    <p style="font-weight:bold;">${img_name}</p>
+                    <img src="media/${img_name}" width=400px alt=${img_name}>
+                    <p style="color: #da7d20;">Click to See Bigger Image</p>
+                    <p style="color: #da7d8F;">${img_des[img_name]}</p>`;
+                itemDiv.style.width = "50vh";
+                itemDiv.style.height = "100vh";
+                itemDiv.addEventListener("click", () => { focus(img_name, part_name); });
+                containerDiv.appendChild(itemDiv);
+            }
+
+            function add_big_img(img_name, part_name) {
+                const itemDiv = document.createElement("div");
+                itemDiv.className = 'items-container';
+                itemDiv.innerHTML = `<p style="font-weight:bold;">${img_name}</p>
+                        <img src="media/${img_name}" width=900px alt=${img_name}>
+                        <p style="color: #da7d20;">Click to Go Back to Gallery</p>`;
+                itemDiv.style.width = "100%";
+                itemDiv.addEventListener("click", () => {
+                    document.getElementById(part_name + '_des').style.display = "flex";
+                    for (const small_img_name in img_des) {
+                        document.getElementById(part_name + small_img_name).style.display = "flex";
+                    }
+                    itemDiv.remove();
+                    document.getElementById(part_name + img_name).scrollIntoView();
+                });
+                containerDiv.appendChild(itemDiv);
+                itemDiv.scrollIntoView();
+            }
+
+            function focus(focus_img_name, part_name) {
+                document.getElementById(part_name + '_des').style.display = "none";
+                for (const img_name in img_des) {
+                    document.getElementById(part_name + img_name).style.display = "none";
+                }
+                add_big_img(focus_img_name, part_name);
+            }
+
+            function reload_all(part_name) {
+                for (const img_name in img_des) {
+                    add_img(img_name, part_name);
+                }
+            }
+            reload_all(part_name);
+        }
+        main();
+    </script>
+</body>
+</html>
