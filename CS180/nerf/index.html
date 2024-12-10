@@ -1,0 +1,233 @@
+<!DOCTYPE HTML>
+<!--
+	Future Imperfect by HTML5 UP
+	html5up.net | @ajlkn
+	Free for personal and commercial use under the CCA 3.0 license (html5up.net/license)
+-->
+<html>
+	<head>
+		<title>NeRF</title>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+		<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+		<!-- Lightweight client-side loader that feature-detects and load polyfills only when necessary -->
+		<script src="https://cdn.jsdelivr.net/npm/@webcomponents/webcomponentsjs@2/webcomponents-loader.min.js"></script>
+		<script type="module" src="https://cdn.jsdelivr.net/npm/zero-md@3?register"></script>
+		<script type="text/javascript" async
+			src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.0/es5/tex-mml-chtml.js">
+		</script>
+		<link rel="stylesheet" href="style.css">
+	</head>
+	<body class="single is-preload">
+
+		<!-- Wrapper -->
+			<div id="wrapper">
+
+				</section>
+
+				<!-- Main -->
+					<div id="main">
+
+						<!-- Post -->
+							<article class="post">
+								<header>
+									<div class="title">
+										<h2>Neural Radiance Fields (NeRF)</h2>
+										<p>Tony Li's CS 180 </> Final Project.</p>
+									</div>
+								</header>
+								<div style="padding-left:10px; padding-right:10px">
+										<hr>
+										<div style="padding-left:10px; padding-right:10px"> <h2 style="text-align: center;">Introduction</h2> 
+											<p>Neural Radiance Field is a novel learning-based apporach to reconstruct 3D objects through resaonable amount of images captured by multiple calibrated cameras from different angles. </p>
+											<hr>
+											<h2 style="text-align: center;">Part 1: Fit a Neural Field to a 2D Image</h2> 
+											<p>In this part, we create a neural network, reduced 2D case of NeRF, with pytorch such that </p>
+											$$ 
+											F: \{u, v\} → \{r, g, b\}, \text{where } \{u, v\} \text{ respresents pixel locations}
+											$$ 
+											<h3 style="text-align: center;">Subpart 1.1: Network Implementation</h3>
+											<p>There are two major components inside of the neural network: Sinusoidal Positional Encoding (PE) and Multi-Layer Perceptrons (MLP). Experiemntally, the existence of Positional Encoding speeds up the training process due to additional Fourier Transform-like representations.</p>
+											<div style="display: flex; align-items: center; justify-content: center;"> 
+												<span><img src="./media/network.jpeg" alt="Neural Network Structure" width="600px" /></span> 
+											</div> 
+											<p>The PE function can be represented as: </p>
+											$$PE(x)=\{x, sin(2^0\pi x), cos(2^0\pi x), sin(2^1\pi x), cos(2^1\pi x), ..., sin(2^{L-1}\pi x), cos(2^{L-1}\pi x)\} \text{, where } L \text{ is the highest frequency level, 10 as the paper suggested value}$$
+											<p>Because we the 2D pixels have only two dimensions (height-coordinate and width-coordinate), and the output dimiension is three (red, green, blue normalized values), the network implemention looks like:</p> 
+											$$
+												\text{class NeRF2DNet(nn.Module)} \gets f(\text{in_dim: int=2, hidden_dim: int=256, out_dim: int=3, L: int=10})
+											$$
+											<h3 style="text-align: center;">Subpart 1.2: Dataloader Implementation</h3>
+											<p>The dataloader is designed to load batches of random pixel locations from a single image. We randomize with a seed on the coordinates of an image, represented by the meshgrid. Dataloader then sample from randomized positons, with the help of <b>torch.utils.data.TensorDataset</b>. </p>
+											<p>Notably, we only use 90% of the coordinates as training data, and the rest is for the validation data.</p>
+											<h3 style="text-align: center;">Subpart 1.3:  Loss Function, Optimizer, and Metric</h3>
+											<p>The loss function is the MSE loss as defined by</p>
+											$$
+												\text{MSE_Loss} \gets \text{nn.MSELoss()(batch_px_values_pred, batch_px_values)}
+											$$
+											<p>The optimizer is the Adam, to provide better training stability:</p>
+											$$
+												\text{optimizer} \gets \text{torch.optim.Adam(nerf2Dnet.parameters(), lr)}
+											$$
+											<p>An exponential learning rate scheduler is added to ensure the learning rate decying properly, so that the training loss converges better:</p>
+											$$
+												\text{scheduler} \gets \text{torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma)}
+											$$
+											<p>Finally, the metric Peak signal-to-noise ratio is used for the post-inspections on the image reconstruction quality. Higher PSNR value correlates with better reconstructions. Our neural network reconstruction is not perfet, and can be viewed as a type of lossy compression. This metric is suitable for our job. Notice that, the metric should not be directly used for backpropagation, where MSE_Loss should be used.</p>
+											$$
+												\text{PSNR} \gets -10 \text{ * np.log10(MSE_Losses)}
+											$$
+											<h3 style="text-align: center;">Subpart 1.4:  Hyperparameter Tunings and Reconstructions of two images</h3>
+											<h4 style="text-align: center;">Subpart 1.4.1:  Reconstruction of a fox image</h4>
+											<p>The reconstruction of the follwoing high-resolution fox.</p>
+											<div style="display: flex; align-items: center; justify-content: center;"> 
+												<span>
+													<img src="./media/source_fox.jpg" alt="Source Fox" width="300px" />
+													$$
+														\begin{align*}
+															\text{epochs} &= 30 \\
+															\text{Image Shape} &= (689, 1024, 3)\\
+															\text{Dataloader Batch Size} &= 10000
+														\end{align*}
+													$$
+												</span>
+											</div>
+											<p>The reconstruction GIF visualizations. The GIF consists of the epoch amount of images, each representing one intermediary generated image.</p>
+											<div style="display: flex; align-items: center; justify-content: center;"> 
+													<div style="display: flex; flex-wrap: wrap; flex-direction: column;">
+														<img src="./media/fox_nerf.gif" alt="Fox NeRF Original" width="250px" />
+														<img src="./media/train_loss_fox.png" alt="Fox NeRF Original" width="250px" />
+														<img src="./media/psnr_fox.png" alt="Fox NeRF Original" width="250px" />
+														$$
+														\begin{align*}
+															\text{Learning Rate} &= 1e-2 \\
+															\text{Scheduler Gamma} &= 0.99 \\
+															\text{num_layer} &= 256\\
+															\text{L} &= 10\\
+														\end{align*}
+														$$
+													</div>
+													<div style="display: flex; flex-wrap: wrap; flex-direction: column;">
+														<img src="./media/fox_nerf.gif" alt="Fox NeRF Original" width="250px" />
+														<img src="./media/train_loss_fox.png" alt="Fox NeRF Original" width="250px" />
+														<img src="./media/psnr_fox.png" alt="Fox NeRF Original" width="250px" />
+														$$
+														\begin{align*}
+															\text{Learning Rate} &= 1e-2 \\
+															\text{Scheduler Gamma} &= 0.99 \\
+															\text{num_layer} &= 256\\
+															\text{L} &= 10\\
+														\end{align*}
+														$$
+													</div>
+													<div style="display: flex; flex-wrap: wrap; flex-direction: column;">
+														<img src="./media/fox_nerf.gif" alt="Fox NeRF Original" width="250px" />
+														<img src="./media/train_loss_fox.png" alt="Fox NeRF Original" width="250px" />
+														<img src="./media/psnr_fox.png" alt="Fox NeRF Original" width="250px" />
+														$$
+														\begin{align*}
+															\text{Learning Rate} &= 1e-2 \\
+															\text{Scheduler Gamma} &= 0.99 \\
+															\text{num_layer} &= 256\\
+															\text{L} &= 10\\
+														\end{align*}
+														$$
+													</div>
+													<div style="display: flex; flex-wrap: wrap; flex-direction: column;">
+														<img src="./media/fox_nerf.gif" alt="Fox NeRF Original" width="250px" />
+														<img src="./media/train_loss_fox.png" alt="Fox NeRF Original" width="250px" />
+														<img src="./media/psnr_fox.png" alt="Fox NeRF Original" width="250px" />
+														$$
+														\begin{align*}
+															\text{Learning Rate} &= 1e-2 \\
+															\text{Scheduler Gamma} &= 0.99 \\
+															\text{num_layer} &= 256\\
+															\text{L} &= 10\\
+														\end{align*}
+														$$
+													</div>
+											</div> 
+											<p>The corresponding train loss graphs and PSNR score graphs are shown below.</p>
+											<h4 style="text-align: center;">Subpart 1.4.2:  Reconstruction of a cat image</h4>
+											<p>The reconstruction of the follwoing high-resolution cat.</p>
+											<div style="display: flex; align-items: center; justify-content: center;"> 
+												<span>
+													<img src="./media/source_cat.jpeg" alt="Source Fox" width="300px" />
+													$$
+														\text{Image Shape} = (1920, 1080, 3)
+													$$
+												</span>
+											</div>
+											<p>The reconstruction GIF visualizations. The GIF consists of the epoch amount of images, each representing one intermediary generated image.</p>
+											<div style="display: flex; align-items: center; justify-content: center;"> 
+												<div style="display: flex; flex-wrap: wrap; flex-direction: column;">
+													<img src="./media/cat_nerf.gif" alt="Fox NeRF Original" width="250px" />
+													<img src="./media/train_loss_cat.png" alt="Fox NeRF Original" width="250px" />
+													<img src="./media/psnr_cat.png" alt="Fox NeRF Original" width="250px" />
+													$$
+													\begin{align*}
+														\text{epochs} &= 30 \\
+														\text{Learning Rate} &= 1e-2 \\
+														\text{Scheduler Gamma} &= 0.99 \\
+														\text{Batch Size} &= 10000 \\
+														\text{hidden_dim} &= 256\\
+														\text{L} &= 10\\
+													\end{align*}
+													$$
+												</div>
+												<div style="display: flex; flex-wrap: wrap; flex-direction: column;">
+													<img src="./media/cat_nerf.gif" alt="Fox NeRF Original" width="250px" />
+													<img src="./media/train_loss_cat.png" alt="Fox NeRF Original" width="250px" />
+													<img src="./media/psnr_cat.png" alt="Fox NeRF Original" width="250px" />
+													$$
+													\begin{align*}
+														\text{epochs} &= 30 \\
+														\text{Learning Rate} &= 1e-2 \\
+														\text{Scheduler Gamma} &= 0.99 \\
+														\text{Batch Size} &= 10000 \\
+														\text{hidden_dim} &= 256\\
+														\text{L} &= 10\\
+													\end{align*}
+													$$
+												</div>
+												<div style="display: flex; flex-wrap: wrap; flex-direction: column;">
+													<img src="./media/cat_nerf.gif" alt="Fox NeRF Original" width="250px" />
+													<img src="./media/train_loss_cat.png" alt="Fox NeRF Original" width="250px" />
+													<img src="./media/psnr_cat.png" alt="Fox NeRF Original" width="250px" />
+													$$
+													\begin{align*}
+														\text{epochs} &= 30 \\
+														\text{Learning Rate} &= 1e-2 \\
+														\text{Scheduler Gamma} &= 0.99 \\
+														\text{Batch Size} &= 10000 \\
+														\text{hidden_dim} &= 256\\
+														\text{L} &= 10\\
+													\end{align*}
+													$$
+												</div>
+												<div style="display: flex; flex-wrap: wrap; flex-direction: column;">
+													<img src="./media/cat_nerf.gif" alt="Fox NeRF Original" width="250px" />
+													<img src="./media/train_loss_cat.png" alt="Fox NeRF Original" width="250px" />
+													<img src="./media/psnr_cat.png" alt="Fox NeRF Original" width="250px" />
+													$$
+													\begin{align*}
+														\text{epochs} &= 30 \\
+														\text{Learning Rate} &= 1e-2 \\
+														\text{Scheduler Gamma} &= 0.99 \\
+														\text{Batch Size} &= 10000 \\
+														\text{hidden_dim} &= 256\\
+														\text{L} &= 10\\
+													\end{align*}
+													$$
+												</div>
+										</div> 
+											
+
+								  </div>
+							</article>
+
+					</div>
+
+			</div>
+	</body>
+</html>
