@@ -38,7 +38,7 @@
 								</header>
 								<div style="padding-left:10px; padding-right:10px">
 										<hr>
-										<div style="padding-left:10px; padding-right:10px"> <h2 style="text-align: center;">Introduction</h2> 
+										<h2 style="text-align: center;">Introduction</h2> 
 											<p>Neural Radiance Field is a novel learning-based apporach to reconstruct 3D objects through resaonable amount of images captured by multiple calibrated cameras from different angles. </p>
 											<hr>
 											<h2 style="text-align: center;">Part 1: Fit a Neural Field to a 2D Image</h2> 
@@ -78,26 +78,30 @@
 												\text{PSNR} \gets -10 \text{ * np.log10(MSE_Losses)}
 											$$
 											<h3 style="text-align: center;">Subpart 1.4:  Hyperparameter Tunings and Reconstructions of two images</h3>
+											<p>The image reconstruction is easier, just passing sequntial pixel coordinates to the model, with the help of meshgrid.</p>
 											<h4 style="text-align: center;">Subpart 1.4.1:  Reconstruction of a fox image</h4>
 											<p>The reconstruction of the follwoing high-resolution fox.</p>
 											<div style="display: flex; align-items: center; justify-content: center;"> 
 												<span>
-													<img src="./media/source_fox.jpg" alt="Source Fox" width="300px" />
+													<img src="./media/source_fox.jpg" alt="Source Fox" width="50%" style="display: block; margin-left: auto; margin-right: auto;"/>
 													$$
 														\begin{align*}
-															\text{epochs} &= 30 \\
-															\text{Image Shape} &= (689, 1024, 3)\\
-															\text{Dataloader Batch Size} &= 10000
+															\text{Image Shape} &= (689, 1024, 3)
 														\end{align*}
 													$$
 												</span>
 											</div>
-											<p>The reconstruction GIF visualizations. The GIF consists of the epoch amount of images, each representing one intermediary generated image.</p>
-											<div style="display: flex; align-items: center; justify-content: center;"> 
-													<div style="display: flex; flex-wrap: wrap; flex-direction: column;">
-														<img src="./media/fox_nerf.gif" alt="Fox NeRF Original" width="250px" />
-														<img src="./media/train_loss_fox.png" alt="Fox NeRF Original" width="250px" />
-														<img src="./media/psnr_fox.png" alt="Fox NeRF Original" width="250px" />
+											<p>The reconstruction GIF visualizations. The GIF consists of the epoch amount of images, each representing one intermediary generated image. Only 90% of the data is used for training, and the rest is reserved for validation.</p>
+											<p>
+												We use <code>num_epochs = 30</code> and <code>batch_size = 1000</code> for the following, and every single one was trained with 1920 iterations. Each training is adjusted with different hyper-parameter choices (eg. change of <code>L</code> and <code>num_layer</code>).
+												<code>L</code> has a significant imapct on the training result, and typically higher the better PSNR score. This is understandable, since the positional encoding will be able to encode more positional information with bigger <code>L</code>. However,
+												change of <code>num_layer</code> does not affect the training results too much, and it probably is due to the fact that we already have far enough neurons for one image.											 
+											</p>
+											<div style="display: flex; justify-items: center; align-items: center; padding-left: 2%;"> 
+													<div style="display: flex; flex-wrap: wrap; justify-content: space-between; flex-direction: column;">
+														<img src="./media/fox_nerf.gif" width="90%"/>
+														<img src="./media/train_loss_fox.png" width="90%"/>
+														<img src="./media/psnr_fox.png" width="90%"/>
 														$$
 														\begin{align*}
 															\text{Learning Rate} &= 1e-2 \\
@@ -107,122 +111,480 @@
 														\end{align*}
 														$$
 													</div>
-													<div style="display: flex; flex-wrap: wrap; flex-direction: column;">
-														<img src="./media/fox_nerf.gif" alt="Fox NeRF Original" width="250px" />
-														<img src="./media/train_loss_fox.png" alt="Fox NeRF Original" width="250px" />
-														<img src="./media/psnr_fox.png" alt="Fox NeRF Original" width="250px" />
+													<div style="display: flex; flex-wrap: wrap; justify-content: space-between; flex-direction: column;">
+														<img src="./media/fox_nerf_L15.gif"  width="90%" />
+														<img src="./media/train_loss_fox_L15.png"  width="90%" />
+														<img src="./media/psnr_fox_L15.png"  width="90%" />
 														$$
 														\begin{align*}
 															\text{Learning Rate} &= 1e-2 \\
 															\text{Scheduler Gamma} &= 0.99 \\
 															\text{num_layer} &= 256\\
-															\text{L} &= 10\\
+															\text{L} &= 15\\
 														\end{align*}
 														$$
 													</div>
-													<div style="display: flex; flex-wrap: wrap; flex-direction: column;">
-														<img src="./media/fox_nerf.gif" alt="Fox NeRF Original" width="250px" />
-														<img src="./media/train_loss_fox.png" alt="Fox NeRF Original" width="250px" />
-														<img src="./media/psnr_fox.png" alt="Fox NeRF Original" width="250px" />
+													<div style="display: flex; flex-wrap: wrap; justify-content: space-between; flex-direction: column;">
+														<img src="./media/fox_nerf_L5.gif"  width="90%" />
+														<img src="./media/train_loss_fox_L5.png"  width="90%" />
+														<img src="./media/psnr_fox_L5.png"  width="90%" />
 														$$
 														\begin{align*}
 															\text{Learning Rate} &= 1e-2 \\
 															\text{Scheduler Gamma} &= 0.99 \\
 															\text{num_layer} &= 256\\
-															\text{L} &= 10\\
+															\text{L} &= 5\\
 														\end{align*}
 														$$
 													</div>
-													<div style="display: flex; flex-wrap: wrap; flex-direction: column;">
-														<img src="./media/fox_nerf.gif" alt="Fox NeRF Original" width="250px" />
-														<img src="./media/train_loss_fox.png" alt="Fox NeRF Original" width="250px" />
-														<img src="./media/psnr_fox.png" alt="Fox NeRF Original" width="250px" />
+													<div style="display: flex; flex-wrap: wrap; justify-content: space-between; flex-direction: column;">
+														<img src="./media/fox_nerf_hidden128.gif"  width="90%" />
+														<img src="./media/train_loss_fox_hidden128.png"  width="90%" />
+														<img src="./media/psnr_fox_hidden128.png"  width="90%" />
 														$$
 														\begin{align*}
 															\text{Learning Rate} &= 1e-2 \\
 															\text{Scheduler Gamma} &= 0.99 \\
-															\text{num_layer} &= 256\\
+															\text{num_layer} &= 128\\
 															\text{L} &= 10\\
 														\end{align*}
 														$$
 													</div>
 											</div> 
-											<p>The corresponding train loss graphs and PSNR score graphs are shown below.</p>
 											<h4 style="text-align: center;">Subpart 1.4.2:  Reconstruction of a cat image</h4>
 											<p>The reconstruction of the follwoing high-resolution cat.</p>
 											<div style="display: flex; align-items: center; justify-content: center;"> 
 												<span>
-													<img src="./media/source_cat.jpeg" alt="Source Fox" width="300px" />
+													<img src="./media/source_cat.jpeg" alt="Source Fox" width="50%" style="display: block; margin-left: auto; margin-right: auto;" />
 													$$
 														\text{Image Shape} = (1920, 1080, 3)
 													$$
 												</span>
 											</div>
 											<p>The reconstruction GIF visualizations. The GIF consists of the epoch amount of images, each representing one intermediary generated image.</p>
-											<div style="display: flex; align-items: center; justify-content: center;"> 
-												<div style="display: flex; flex-wrap: wrap; flex-direction: column;">
-													<img src="./media/cat_nerf.gif" alt="Fox NeRF Original" width="250px" />
-													<img src="./media/train_loss_cat.png" alt="Fox NeRF Original" width="250px" />
-													<img src="./media/psnr_cat.png" alt="Fox NeRF Original" width="250px" />
+											<p>We use <code>num_epochs = 30</code> and <code>batch_size = 30000</code> for the following, and each one was trained with 1890 iterations.</p>
+											<div style="display: flex; justify-content: center; padding-left: 2%;"> 
+												<div style="display: flex; flex-wrap: wrap; justify-content: space-between; flex-direction: column;">
+													<img src="./media/cat_nerf.gif"  width="90%" />
+													<img src="./media/train_loss_cat.png"  width="90%" />
+													<img src="./media/psnr_cat.png"  width="90%" />
 													$$
 													\begin{align*}
-														\text{epochs} &= 30 \\
 														\text{Learning Rate} &= 1e-2 \\
 														\text{Scheduler Gamma} &= 0.99 \\
-														\text{Batch Size} &= 10000 \\
 														\text{hidden_dim} &= 256\\
 														\text{L} &= 10\\
 													\end{align*}
 													$$
 												</div>
-												<div style="display: flex; flex-wrap: wrap; flex-direction: column;">
-													<img src="./media/cat_nerf.gif" alt="Fox NeRF Original" width="250px" />
-													<img src="./media/train_loss_cat.png" alt="Fox NeRF Original" width="250px" />
-													<img src="./media/psnr_cat.png" alt="Fox NeRF Original" width="250px" />
+												<div style="display: flex; flex-wrap: wrap; justify-content: space-between; flex-direction: column;">
+													<img src="./media/cat_nerf_L15.gif"  width="90%" />
+													<img src="./media/train_loss_cat_L15.png"  width="90%" />
+													<img src="./media/psnr_cat_L15.png"  width="90%" />
 													$$
 													\begin{align*}
-														\text{epochs} &= 30 \\
 														\text{Learning Rate} &= 1e-2 \\
 														\text{Scheduler Gamma} &= 0.99 \\
-														\text{Batch Size} &= 10000 \\
 														\text{hidden_dim} &= 256\\
-														\text{L} &= 10\\
+														\text{L} &= 15\\
 													\end{align*}
 													$$
 												</div>
-												<div style="display: flex; flex-wrap: wrap; flex-direction: column;">
-													<img src="./media/cat_nerf.gif" alt="Fox NeRF Original" width="250px" />
-													<img src="./media/train_loss_cat.png" alt="Fox NeRF Original" width="250px" />
-													<img src="./media/psnr_cat.png" alt="Fox NeRF Original" width="250px" />
+												<div style="display: flex; flex-wrap: wrap; justify-content: space-between; flex-direction: column;">
+													<img src="./media/cat_nerf_L5.gif"  width="90%" />
+													<img src="./media/train_loss_fox_L5.png"  width="90%" />
+													<img src="./media/psnr_cat_L5.png"  width="90%" />
 													$$
 													\begin{align*}
-														\text{epochs} &= 30 \\
 														\text{Learning Rate} &= 1e-2 \\
 														\text{Scheduler Gamma} &= 0.99 \\
-														\text{Batch Size} &= 10000 \\
 														\text{hidden_dim} &= 256\\
-														\text{L} &= 10\\
+														\text{L} &= 5\\
 													\end{align*}
 													$$
 												</div>
-												<div style="display: flex; flex-wrap: wrap; flex-direction: column;">
-													<img src="./media/cat_nerf.gif" alt="Fox NeRF Original" width="250px" />
-													<img src="./media/train_loss_cat.png" alt="Fox NeRF Original" width="250px" />
-													<img src="./media/psnr_cat.png" alt="Fox NeRF Original" width="250px" />
+												<div style="display: flex; flex-wrap: wrap; justify-content: space-between; flex-direction: column;">
+													<img src="./media/cat_nerf_dim128.gif"  width="90%" />
+													<img src="./media/train_loss_cat_dim128.png"  width="90%" />
+													<img src="./media/psnr_cat_dim128.png"  width="90%" />
 													$$
 													\begin{align*}
-														\text{epochs} &= 30 \\
 														\text{Learning Rate} &= 1e-2 \\
 														\text{Scheduler Gamma} &= 0.99 \\
-														\text{Batch Size} &= 10000 \\
-														\text{hidden_dim} &= 256\\
+														\text{hidden_dim} &= 128\\
 														\text{L} &= 10\\
 													\end{align*}
 													$$
 												</div>
 										</div> 
-											
-
+										<hr>
+										<h2 style="text-align: center;">Part 2: Fit a Neural Radiance Field from Multi-view Images</h2>
+										<p>In this part, we use multiple picutres shot from consistent calibrated cameras on one object to reconstruct the 3D models. The expected 
+											model should be able recreate images of the scene even with just fictional cameras.
+										</p>
+										<div style="display: flex; justify-content: space-between;">
+											<img src="./media/cameras.png" width="40%"> 
+											<p style="width: 10%">The image on the left shows how the cameras are located, including training cameras in black, validation cameras in red, and test cameras in green.</p>
+											<img src="./media/object.png" width="20%">
+											<p style="width: 10%">The image on the left shows the object.</p>
+										</div>
+										<h3 style="text-align: center;">Subart 2.1: Create Rays from Cameras</h3>
+										<p>This part constructs the fundamental ray directions/orgins, pixel locations, and camera coordinates conversion matrices.</p>
+										<div style="display: flex; justify-content: center;">
+											<img src="./media/transformation.jpg" width="50%"> 
+											<p style="width: 25%">The image on the left shows how the cameras, pixels, and world coordinates are related.</p>
+										</div>
+										<h4 style="text-align: center;">Subpart 2.1.1: Camera to World Coordinate Conversion</h4>
+										<p>
+											This conversion concentrates on how to transform the world coordinates to camera coordinates. The key is change of basis, which translate and rotate the real world coordinates to the coordinates where centered around the cmaera focal point. As the result,
+											the conversion matrix consists of two parts, rotational matrix and translational vector.
+										</p>
+										$$
+											\begin{align*}
+												\textbf{X}_{\textbf{w}} &\gets (x_w, y_w, z_w) \text{ , world coordinates} \\
+												\textbf{X}_{\textbf{c}} &\gets (x_c, y_c, z_c) \text{, camera coordinates} \\
+												\textbf{R}_{3 \times 3} &\gets \text{3 by 3 rotational matrix} \\
+												\textbf{t} &\gets \text{3 by 1 translational vector} \\
+												\begin{bmatrix}\textbf{R}_{3 \times 3} & \textbf{t}\\ \textbf{0}_{3 \times 3} & 1 \end{bmatrix} &\gets \text{world-to-camera transformation matrix} \\
+												\begin{bmatrix}x_c \\ y_c \\ z_c \\ 1 \end{bmatrix} &= \begin{bmatrix}\textbf{R}_{3 \times 3} & \textbf{t}\\ \textbf{0}_{3 \times 3} & 1 \end{bmatrix}\begin{bmatrix}x_w \\ y_w \\ z_w \\ 1 \end{bmatrix}
+											\end{align*}
+										$$
+										<p>The following how the Python implementation should work for batch conversions.</p>
+										<pre style="display: flex; justify-content: center;">
+def transform(c2w, x_c, device='cuda'):
+	"""
+	Parameters:
+		c2w : torch.Tensor
+			Camera to world transformation matrix (shape: N x 4 x 4)
+		x_c : torch.Tensor
+			Camera space coordinates (shape: N x 3 x 1)
+		device : str, optional
+			Device to move tensors to (default: 'cuda')
+	Return:
+		x_w, world space coordinates that have the same shape as x_c
+	Transform batched points from camera space to world space.
+	"""
+										</pre>
+										<h4 style="text-align: center;">Subpart 2.1.2: Pixel to Camera Coordinate Conversion</h4>
+										<p>
+											This conversion concentrates on how to transforma from pixel 2D locations to camera coordinates. The key is the intrinsic matrix, which relates to
+											internal properties of a camera, such as focal length and image aspect dimensions.
+										</p>
+										$$
+										\begin{align*}
+											\textbf{I} &\gets (u, v) \text{ , pixel 2D coordinates} \\
+											\textbf{X}_{\textbf{c}} &\gets (x_c, y_c, z_c) \text{, camera coordinates} \\
+											(f_x, f_y) &\gets \text{focal lengths} \\
+											(o_x, o_y) &\gets \text{image width and height over 2} \\
+											s &\gets \text{depth of the point along the optical axis} \\
+											\begin{bmatrix}f_x & 0 & o_x\\ 0 & f_y & o_y \\ 0 & 0 & 1 \end{bmatrix} &\gets \textbf{K}\text{, intrinsic matrix} \\
+											s\begin{bmatrix}u \\ v \\ 1 \end{bmatrix} &= \textbf{K}\begin{bmatrix}x_c \\ y_c \\ z_c \end{bmatrix}
+										\end{align*}
+										$$
+										<p>The following how the Python implementation should work for batch conversions. <code>torch.einsum</code> is convienient to batch multiply <code>s</code> and <code>uv</code>.</p>
+										<pre style="display: flex; justify-content: center;">
+def pixel_to_camera(K, uv, s, device='cuda'):
+	"""
+	Parameters:
+		K : torch.Tensor
+			Intrinsic matrix to map camera space coordinates to pixel space (shape: 1 x 3 x 3)
+		uv : torch.Tensor
+			The pixel coordinates in batch (shape: N x 2 x 1)
+		s : torch.Tensor
+			The scale factor, the depth of points in the optical axis (shape: N)
+		device : str, optional
+			Device to move tensors to (default: 'cuda')
+	Return:
+		X_c: torch.Tensor
+			Batched camera space coordinates (shape: N x 3 x 1)
+	Transform batched pixel points to camera space.
+	""
+										</pre>
+										<h4 style="text-align: center;">Subpart 2.1.3: Pixel to Ray Conversion</h4>
+										<p>
+											This conversion encompasses all transformation listed above. We create rays from focal point of the camera to the pixels. 1. convert pixels to 
+											camera coordinates; 2. transform camera coordinates to world coordinates; 3. Obtain focal point and create rays from that point to world coordinates got in step 2.
+										</p>
+										$$
+										\begin{align*}
+											\textbf{r}_o &\gets \text{ray origin, focal point} \\
+											\textbf{r}_d &\gets \text{ray direction, normalized} \\
+											\textbf{r}_o &= -\textbf{R}_{3 \times 3}\textbf{t} \text{, where } \textbf{R}_{3 \times 3} \text{ and } \textbf{t} \text{ are defined in world-to-camera matrix}\\
+											\textbf{r}_d &= \frac{\textbf{X}_\textbf{w}-\textbf{r}_o}{||\textbf{X}_\textbf{w} - \textbf{r}_o||^2} \\
+										\end{align*}
+										$$
+										<p>The following how the Python implementation should work for batch conversions. <code>torch.linalg.norm</code> by default works for batched matrix.</p>
+										<pre style="display: flex; justify-content: center;">
+def pixel_to_ray(K, c2w, uv, device='cuda'):
+	"""
+	Parameters:
+		K : torch.Tensor
+			Intrinsic matrix to map camera space coordinates to pixel space (shape: 1 x 3 x 3)
+		c2w : torch.Tensor
+			Camera to world transformation matrix (shape: N x 4 x 4)
+		uv : torch.Tensor
+			The pixel coordinates in batch (shape: N x 2 x 1) --> N coordinates
+		device : str, optional
+			Device to move tensors to (default: 'cuda')
+	Return:
+		ray_o, ray_d: tuple of torch.Tensor
+			Batched ray orgins and ray directions, (both with shape: N x 3 x 1) --> N rays
+	Transform batched pixel points to rays.
+	"""
+										</pre>
+										<h3 style="text-align: center;">Subpart 2.2: Sampling</h3>
+										<p>This part we implement sampling methods to create a proper dataloader for the neural network.</p>
+										<h4 style="text-align: center;">Subpart 2.2.1: Sampling Rays from Images</h4>
+										<p>
+											We sample M images, and randomly select N // M pixels from each image. Each pixel can be converted to ray based on previous pixel_to_ray function.
+										</p>
+										<p>The following Python function shows how batched rays are sampled.
+										<pre style="display: flex; justify-content: center;">
+def sample_rays(images, c2w, K, sample_size, shuffle=True, disable_tqdm=False, device='cuda'):
+	"""
+	Parameters:
+	images: torch.Tensor
+		Batched images (shape: M x H x W x 3)
+	c2w: torch.Tensor
+		Batched camera-to-world transformation matrices, inverse of extrinsic matrix (shape: M x 4 x 4)
+	K : torch.Tensor
+		Intrinsic matrix to map camera space coordinates to pixel space (shape: 1 x 3 x 3)
+	sample_size: int
+		Total amount of pixels to sample from all images
+	shuffle: bool
+		Boolean variable to shuffle the rays or not, Notice: unshuffled rays are used for image rendering
+	device : str, optional
+		Device to move tensors to (default: 'cuda')
+	Return:
+	pixel_colors: torch.Tensor
+		Batched pixel colors (shape: sample_size x 3)
+	rays_o: torch.Tensor
+		Batched ray orgins (shape: sample_size x 3 x 1)
+	rays_d: torch.Tensor
+		Batched ray directions (shape: sample_size x 3 x 1)
+	We randomly sample sample_size rays from M images, where sample_size.
+	"""
+										</pre>
+										<h4 style="text-align: center;">Subpart 2.2.2: Sampling Points Along Rays</h4>
+										<p>
+											Discritize each ray into samples that live in the 3D space, by uniformly sampling along the ray (recommended n_samples to 32 or 64)
+										</p>
+										<p>
+											Actual 3D corrdinates <code>x</code>, which is sampled with <code>t = np.linspace(near=2.0, far=6.0, n_samples)</code>:
+											$$
+											x = R_0 + R_d \times t
+											$$
+											To prevent potential overfitting when we train the NeRF later on, apply some small perturbation to the points only during training, so that every location along the ray used during training.
+											<code>t = t + (np.random.rand(t.shape) * perturb)</code>, where <code>t</code> is slightly perturbed to prevent potential overfitting issue during the network training.
+										</p>
+										<p>The following Python function shows how batched points are sampled from batched rays.
+										<pre style="display: flex; justify-content: center;">
+def sample_pts_from_rays(rays_o, rays_d, near=2.0, far=6.0, sample_size_per_ray=32, perturb=0.02, device='cuda'):
+	"""
+	Parameters:
+		rays_o: torch.Tensor
+			Batched ray orgins (shape: N x 3 x 1)
+		rays_d: torch.Tensor
+			Batched ray directions (shape: N x 3 x 1)
+		near: float
+			Near clipping
+		far: float
+			Far clipping
+		sample_size_per_ray: int
+			Amount of points sampled from each ray
+	Returns:
+		pts: torch.Tensor
+			Batched points (shape: N x sample_size_per_ray x 3 x 1)
+	We sample M points along rays, where M = N * sample_size_per_ray.
+	"""
+										</pre>
+										<h3 style="text-align: center;">Subpart 2.3: Dataloader Implementation</h3>
+										<p>
+											Randomly sample pixels from multi-view images to create rays. Dataloader is able to convert the pixel coordinates into rays, and return ray origin, ray direction and pixel colors.
+										</p>
+										<div style="display: flex; justify-content: space-between;">
+											<img src="./media/all_cameras.gif" width="38%"> 
+											<p style="width: 10%">The image on the left shows how the sampled rays and points look like with avg. 3 rays per image. Point colors represents pixel colors, not actual densities-dependent radiances.</p>
+											<img src="./media/one_camera.gif" width="38%">
+											<p style="width: 10%">The image on on the left shows how the sampled rays and points look like with on one image. Point colors represents pixel colors, not actual densities-dependent radiances</p>
+										</div>
+										<p>
+											The follwoing PyTorch tensor datasets constructor sample rays and points form batched images and create training and validation datasets.
+											<code>torch.utils.data.DataLoader</code> is helfpful to load tensor datasets.
+										</p>
+										<pre style="display: flex; justify-content: center;">
+def nerf_train_valid_datasets(images, c2ws, ray_amount=50000, pt_per_ray_amount=64, cut_off=0.8, device='cuda'):
+    """
+    Parameters:
+        images: torch.Tensor
+            Batched images (shape: M x H x W x 3)
+        c2ws: torch.Tensor
+            Batched camera-to-world transformation matrices, inverse of extrinsic matrix (shape: M x 4 x 4)
+        ray_amount: int
+            Amount of rays sampled from images
+        pt_per_ray: int
+            Amount of points sampled from each ray
+        cut_off: float
+            Percentage of rays used for training
+        device : str, optional
+            Device to move tensors to (default: 'cuda')
+    Returns:
+      train_datasets: torch.utils.data.TensorDataset
+          Train datase, in form of [points, r_d, pixel_colors, densities]
+      valid_datasets: torch.utils.data.TensorDataset
+          Validation dataset, in form of [points, r_d, pixel_colors, densities]
+    Generate the train_loader and valid_loader for the images and c2ws
+    """
+										</pre>
+										<h3 style="text-align: center;">Subpart 2.4: Neural Radiance Field</h3>
+										<div style="display: flex; justify-content: space-between;">
+											<img src="./media/mlp_nerf.png" width="50%"> 
+											<p style="width: 20%">
+												Inputs:
+												tensor <code>x</code>, positions of sampled points (shape: (batch_size, pt_count_per_ray, 3, 1));
+												tensor <code>rd</code>, ray directions of sampled points (shape: (batch_size, pt_count_per_ray, 3, 1)).
+											</p>
+											<p style="width: 20%">
+												Outputs:
+												tensor <code>colors</code>, radiances' RGB colors. (shape: (batch_size, pt_count_per_ray, 3));
+												tensor <code>densities</code>, a.k.a sigmas, strengths of radiances (shape: (batch_size, pt_count_per_ray, 1)).
+											</p>
+										</div>
+										<p>
+											The neural net takes in 3D world coordinates and directions as input, and outputs the color and density of the points. Ray directions can be treated as the viewing direction onto the points, and the color of point changes depending on the viewing angles. 
+											PE encoder of 3D coordinates need more frequencies (eg. L = 10) than PE encoder of ray direction (eg. L = 4).
+										</p>
+										<h3 style="text-align: center;">Subpart 2.5: Volume Rendering</h3>
+										<p>
+											The volume rendering function casts 3D radiences coordinates along with their densities (sigmas) back to image pixel color. 
+											The result of <code>volrend</code> can be reshaped to (image width, image height, 3) to get back the predicted image.
+										</p>
+										<p>The following is the complete continuous function. We only focus on the second implementable discretized function.</p>
+										$$
+										\begin{align*}
+										C(\textbf{r})&=\int_{t_n}^{t_f}T(t)\sigma(\textbf{r}(t))\textbf{c}(\textbf{r}(t),\textbf{d})dt \text{, where } T(t)=\exp(-\int^t_{t_n}\sigma(\textbf{r}(s))ds)\\
+										\implies \hat{C}(\textbf{r})&=∑^N_{i=1}T_i(1-\exp(-\sigma_i\delta_i))\textbf{c}_i \text{, where } T_i=\exp(-∑^{i-1}_{j=1}\sigma_j\delta_j)\\
+										\sigma &\gets \text{densities as described in the net}\\
+										\delta &\gets \text{step size} = \frac{\text{far} - \text{near}}{\text{no. pts per ray}}\\
+										\textbf{c}_i &\gets \text{color obtained from sample location } i\\
+										T_i &\gets \text{Prob}(\text{ray not terminating before sample location }i)\\
+										1-\exp(-\sigma_i\delta_i) &\gets \text{Prob}({\text{ray terminating at sample location }i})
+										\end{align*}
+										$$
+										<p>
+											Simple explanation: along the ray, for evey small step <code>dt</code>, we add a little contribution to the final color. The following is the 
+											Python function that enables batch volume-rendering. <code>T</code> generated by <code>torch.cumsum</code> alone is not enough, because we need to
+											ensure that that every ray is terminating at the sampled point location with probability 1, and a simple way to do that is using <code>torch.cat</code> to concatenate
+											a <code>torch.ones((N, 1))</code> to <code>T</code>.
+										</p>
+										<p>
+											For Bells and Whistles, the volume-rendering function can also change the default black background. We can simply add additional
+											<code>background_color_contribution</code>, computed by desired color times last dimension of <code>T</code>, to the final rendered colors. 
+											The background color should only be added during the testing phase, not the training phase.
+										</p>
+										<p>
+											There is a little caveat in the background color rendering. Using <code>volrend</code> alone sometimes create few random black dots in the background.
+											The reason this happens is because the way the network is trained, it is possible for it to learn a representation where there is black color with nonzero density in the background area, 
+											instead of zero density in the entire background area. 
+										</p>
+										<pre style="display: flex; justify-content: center;">
+def volrend(sigmas, rgbs, step_size, background_color=None, device='cuda'):
+	"""
+	Parameters:
+		sigmas: torch.Tensor
+			Batched sigmas, densities (shape: N x M x 1), N: batch size, M: amount of points per ray
+		rgbs: torch.Tensor
+			Batched rgbs (shape: N x M x 3), N: batch size, M: amount of points per ray
+		step_size: int
+			Step size
+		background_color: tuple of int
+			Background color, default None
+		device : str, optional
+			Device to move tensors to (default: 'cuda')
+	Returns:
+		rendered_colors: torch.Tensor
+			Batched colors (shape: N x 3)
+	Volume rendering function for a batch of rays.
+	This rendered color is what we will compare with our posed images in order to train our network.
+	"""
+										</pre>
+										<h3 style="text-align: center;">Final Subpart: Train and Test</h3>
+										<p>We train on a Lego scene and test on provided test datasets.</p>
+										<h4 style="text-align: center;">Brief Description of Implementation</h4>
+										<p>We train the network with the following parameters and hyper-parameters.</p>
+										$$
+										\begin{align*}
+										\text{num_epoch} &\gets 30\\
+										\text{ray_amount} &\gets 150 \times 150 \times 80\\
+										\text{pt_per_ray_amount} &\gets 64\\
+										\text{batch_size} &\gets 150 \times 150\\
+										\text{MSE_loss_fn} &\gets \text{nn.MSELoss()}\\
+										\text{optimizer} &\gets \text{torch.optim.Adam(nerfNet.parameters(), lr=1.5e-3)}\\
+										\text{scheduler} &\gets \text{torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.99)}
+										\end{align*}
+										$$
+										<p>
+											We use the following renderer to create predicted images.
+										</p>
+										<pre style="display: flex; justify-content: center;">
+def nerf_renderer(model, c2ws, image_shape=(200, 200, 3), pt_per_ray_amount=64, background_color=None, device='cuda'):
+	"""
+	Parameters:
+		model: torch.nn.Module
+			Nerf model
+		c2ws: torch.Tensor
+			Batched camera-to-world transformation matrices, inverse of extrinsic matrix (shape: M x 4 x 4)
+		image_shape: tuple of int
+			Default shape: 200 x 200 x 3
+		pt_per_ray_amount: int
+			Amount of points sampled from each ray
+		background_color: tuple of int
+			Background color, default None
+		device : str, optional
+			Device to move tensors to (default: 'cuda')
+	Returns:
+		rendered_images: list of numpy.ndarray
+			Batched rendered images (shape: M of H x W x 3)
+	"""
+										</pre>
+										<p>
+											The following images show predicted images at epoch 0, 5, 10, 15, 20, and 25, respectively.
+										</p>
+										<div style="display: flex; justify-content: center;">
+											<img src="./media/train_epoch_0.png" width="15%"> 
+											<img src="./media/train_epoch_5.png" width="15%"> 
+											<img src="./media/train_epoch_10.png" width="15%"> 
+											<img src="./media/train_epoch_15.png" width="15%"> 
+											<img src="./media/train_epoch_20.png" width="15%"> 
+											<img src="./media/train_epoch_25.png" width="15%"> 
+										</div>
+										<p>
+											The following shows what one single-step camera rays and points look like and the training visualization GIF of all 30 epochs of intermediary generated images.
+										</p>
+										<div style="display: flex; justify-content: space-around;">
+											<img src="./media/all_cameras_one_batch.gif" width="40%"> 
+											<img src="./media/nerf_truck_training.gif" width="25%"> 
+										</div>
+										<p>
+											The following shows training losses curve, PSNR scores (with final 27.5dB score), and what generated images on the testing dataset, visualized as a GIF, look like.
+										</p>
+										<div style="display: flex; justify-content: center;">
+											<img src="./media/nerf_training_loss.png" width="30%"> 
+											<img src="./media/nerf_psnr.png" width="30%"> 
+											<img src="./media/nerf_truck_test.gif" width="25%"> 
+										</div>
+										<p>
+											The follwowing image display a novel view of the scene with an arbitrary extrinsic matrix.
+										</p>
+										<div style="display: flex; justify-content: center;">
+											<img src="./media/novel_view.png" width="30%"> 
+										</div>
+										<p>
+											Bells and Whistles: Background recoloring. The implementation details are written in the Subpart 2.5: Volume Rendering.
+										</p>
+										<div style="display: flex; justify-content: center;">
+											<img src="./media/nerf_truck_test_blue_bg.gif" width="30%"> 
+										</div>
 								  </div>
 							</article>
 
