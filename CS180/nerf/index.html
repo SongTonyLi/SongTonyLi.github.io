@@ -574,16 +574,26 @@ def nerf_renderer(model, c2ws, image_shape=(200, 200, 3), pt_per_ray_amount=64, 
 											<img src="./media/nerf_truck_test.gif" width="25%"> 
 										</div>
 										<p>
-											The follwowing image display a novel view of the scene with an arbitrary extrinsic matrix.
+											The follwowing image display a novel view of the scene with an arbitrary (slightly modified from a real one) extrinsic matrix.
 										</p>
-										<div style="display: flex; justify-content: center;">
-											<img src="./media/novel_view.png" width="30%"> 
+										<div style="display: flex; align-items: center; justify-content: center;">
+											<span>
+											<img src="./media/nerf_arbitary.png" width="100%"> 
+											$$
+												\text{changed_cws} = \begin{bmatrix}
+												0.0379313 & -0.82002443 & 0.56979501 & -2.2969172 \\ 
+												-0.99855214 & -0.04417564 & 0.0306955 & -0.12373751 \\
+												-0.35 & -0.67062119 & -0.62121336 & 3.31041694 \\
+												0. & 0. & 0. & 1.
+												\end{bmatrix}
+											$$
+											</span>
 										</div>
 										<p>
 											Bells and Whistles: Background recoloring. The implementation details are written in the Subpart 2.5: Volume Rendering.
 										</p>
 										<div style="display: flex; justify-content: center;">
-											<img src="./media/nerf_truck_test_blue_bg.gif" width="30%"> 
+											<img src="./media/nerf_test_blue.gif" width="30%"> 
 										</div>
 								  </div>
 							</article>
