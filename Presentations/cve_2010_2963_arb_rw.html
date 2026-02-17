@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CVE-2010-2963 — Arbitrary R/W via Uninitialized Pointer</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Space+Grotesk:wght@400;600;700&display=swap');
+
+  :root {
+    --bg: #0a0e17;
+    --surface: #111827;
+    --border: #1e293b;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --green: #22c55e;
+    --green-dim: rgba(34, 197, 94, 0.12);
+    --red: #ef4444;
+    --red-dim: rgba(239, 68, 68, 0.12);
+    --amber: #f59e0b;
+    --amber-dim: rgba(245, 158, 11, 0.12);
+    --blue: #3b82f6;
+    --blue-dim: rgba(59, 130, 246, 0.12);
+    --purple: #a78bfa;
+    --purple-dim: rgba(167, 139, 250, 0.12);
+    --cyan: #22d3ee;
+    --pink: #f472b6;
+    --pink-dim: rgba(244, 114, 182, 0.12);
+    --orange: #fb923c;
+    --orange-dim: rgba(251, 146, 60, 0.12);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Space Grotesk', sans-serif;
+    min-height: 100vh;
+    padding: 1.5rem;
+  }
+
+  h1 {
+    font-size: 1.35rem;
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 0.2rem;
+    letter-spacing: -0.02em;
+    background: linear-gradient(135deg, var(--orange), var(--red));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .subtitle {
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.75rem;
+    margin-bottom: 1.4rem;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .controls {
+    display: flex;
+    justify-content: center;
+    gap: 0.4rem;
+    margin-bottom: 1.4rem;
+    flex-wrap: wrap;
+  }
+
+  .step-btn {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    padding: 0.42rem 0.8rem;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface);
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+  .step-btn:hover { border-color: var(--cyan); color: var(--text); }
+  .step-btn.active {
+    border-color: var(--cyan); color: var(--cyan);
+    background: rgba(34, 211, 238, 0.06);
+    box-shadow: 0 0 20px rgba(34, 211, 238, 0.08);
+  }
+
+  /* Layout */
+  .main-layout {
+    display: grid;
+    grid-template-columns: 1fr 280px 1fr;
+    gap: 1.4rem;
+    max-width: 1050px;
+    margin: 0 auto;
+    align-items: start;
+  }
+  @media (max-width: 850px) { .main-layout { grid-template-columns: 1fr; } }
+
+  /* Memory table */
+  .mem-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.58rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    margin-bottom: 0.45rem;
+    text-align: center;
+  }
+
+  .mem-table {
+    width: 280px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--surface);
+    margin: 0 auto;
+  }
+
+  .mem-row {
+    display: grid;
+    grid-template-columns: 54px 1fr 80px;
+    border-bottom: 1px solid var(--border);
+    min-height: 33px;
+    align-items: center;
+    transition: all 0.4s ease;
+  }
+  .mem-row:last-child { border-bottom: none; }
+
+  .mem-addr {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.53rem;
+    color: var(--muted);
+    padding: 0.3rem 0.35rem;
+    text-align: right;
+    border-right: 1px solid var(--border);
+  }
+  .mem-val {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.63rem;
+    padding: 0.3rem 0.45rem;
+    transition: all 0.4s ease;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .mem-name {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.53rem;
+    padding: 0.3rem 0.35rem;
+    text-align: right;
+    color: var(--muted);
+    border-left: 1px solid var(--border);
+  }
+
+  .mem-row.hl-green  { background: var(--green-dim); }
+  .mem-row.hl-green  .mem-val { color: var(--green); font-weight: 600; }
+  .mem-row.hl-red    { background: var(--red-dim); }
+  .mem-row.hl-red    .mem-val { color: var(--red); font-weight: 600; }
+  .mem-row.hl-amber  { background: var(--amber-dim); }
+  .mem-row.hl-amber  .mem-val { color: var(--amber); font-weight: 600; }
+  .mem-row.hl-blue   { background: var(--blue-dim); }
+  .mem-row.hl-blue   .mem-val { color: var(--blue); font-weight: 600; }
+  .mem-row.hl-purple { background: var(--purple-dim); }
+  .mem-row.hl-purple .mem-val { color: var(--purple); font-weight: 600; }
+  .mem-row.hl-pink   { background: var(--pink-dim); }
+  .mem-row.hl-pink   .mem-val { color: var(--pink); font-weight: 600; }
+  .mem-row.hl-orange { background: var(--orange-dim); }
+  .mem-row.hl-orange .mem-val { color: var(--orange); font-weight: 600; }
+  .mem-row.stale     { opacity: 0.5; }
+
+  .sep-row {
+    background: var(--border);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.5rem;
+    color: var(--muted);
+    text-align: center;
+    padding: 0.2rem;
+    letter-spacing: 0.1em;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .addr-hint {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.48rem;
+    color: var(--muted);
+    text-align: center;
+    margin: 0.2rem 0;
+    opacity: 0.6;
+  }
+
+  /* Arrow */
+  .rw-arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.3rem;
+    margin-top: 0.8rem;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    text-align: center;
+  }
+  .rw-arrow.visible { opacity: 1; }
+  .rw-arrow .icon { font-size: 1.1rem; color: var(--red); animation: pulse 1.2s infinite; }
+  .rw-arrow .label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--red);
+    line-height: 1.4;
+  }
+  @keyframes pulse { 0%,100%{opacity:.4} 50%{opacity:1} }
+
+  /* Panels */
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.85rem;
+    min-height: 200px;
+  }
+  .panel-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.58rem;
+    color: var(--cyan);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    margin-bottom: 0.6rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .panel-title::before {
+    content: '';
+    display: inline-block;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--cyan);
+  }
+
+  .narration {
+    font-size: 0.76rem;
+    line-height: 1.6;
+    color: var(--text);
+  }
+  .narration strong { color: var(--cyan); font-weight: 600; }
+  .narration code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.66rem;
+    background: rgba(34, 211, 238, 0.08);
+    padding: 0.06rem 0.28rem;
+    border-radius: 3px;
+    color: var(--cyan);
+  }
+  .narration .danger { color: var(--red); }
+  .narration .warn { color: var(--amber); }
+  .narration .ok { color: var(--green); }
+  .narration .leak { color: var(--pink); }
+
+  .code-block {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.55rem;
+    line-height: 1.5;
+    white-space: pre;
+    color: var(--muted);
+    max-height: 460px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+  .code-block::-webkit-scrollbar { width: 4px; }
+  .code-block::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+  .code-line { display: block; padding: 0 0.2rem; border-left: 2px solid transparent; transition: all 0.3s ease; }
+  .code-line.hl     { color: var(--text); background: rgba(34, 211, 238, 0.06); border-left-color: var(--cyan); }
+  .code-line.hl-red { color: var(--text); background: rgba(239, 68, 68, 0.08); border-left-color: var(--red); }
+  .code-block .comment { color: #475569; }
+  .code-block .kw { color: var(--purple); }
+  .code-block .fn { color: var(--cyan); }
+  .code-block .str { color: var(--green); }
+  .code-block .pp { color: var(--amber); }
+  .code-block .tp { color: var(--amber); }
+</style>
+</head>
+<body>
+
+<h1>CVE-2010-2963 — Arbitrary R/W via Uninitialized Pointer</h1>
+<p class="subtitle">v4l2 compat ioctl: attacker-controlled stack overlaps kbuf.m.userptr</p>
+
+<div class="controls">
+  <button class="step-btn active" data-step="0">① Attacker sprays stack</button>
+  <button class="step-btn" data-step="1">② spray returns</button>
+  <button class="step-btn" data-step="2">③ compat ioctl handler</button>
+  <button class="step-btn" data-step="3">④ kbuf.m.userptr used</button>
+  <button class="step-btn" data-step="4">⑤ Arbitrary write!</button>
+</div>
+
+<div class="main-layout">
+
+  <div class="panel">
+    <div class="panel-title">What's happening</div>
+    <div class="narration" id="narration"></div>
+  </div>
+
+  <div>
+    <div class="mem-label">Kernel Stack</div>
+    <div class="addr-hint">▲ HIGH</div>
+    <div class="mem-table" id="stack"></div>
+    <div class="addr-hint">▼ LOW</div>
+    <div class="rw-arrow" id="rw-arrow">
+      <span class="icon">⚡</span>
+      <span class="label">WRITE to<br>attacker-chosen addr</span>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Code context</div>
+    <div class="code-block" id="code-view"></div>
+  </div>
+
+</div>
+
+<script>
+const TARGET = '0xc0de0000';
+
+const SRC = [
+  { n:1,  c:`<span class="pp">/* ---- ATTACKER (userspace) ---- */</span>` },
+  { n:2,  c:`` },
+  { n:3,  c:`<span class="comment">// Step 1: Spray via a deep call chain</span>` },
+  { n:4,  c:`<span class="comment">// that puts our target address on the</span>` },
+  { n:5,  c:`<span class="comment">// kernel stack in the right position.</span>` },
+  { n:6,  c:`<span class="comment">// E.g. a prior ioctl or syscall whose</span>` },
+  { n:7,  c:`<span class="comment">// locals overlap kbuf.m.userptr.</span>` },
+  { n:8,  c:`` },
+  { n:9,  c:`<span class="kw">void</span> <span class="fn">spray_target_addr</span>(<span class="kw">int</span> fd) {` },
+  { n:10, c:`    <span class="kw">unsigned long</span> addrs[4];` },
+  { n:11, c:`    addrs[0] = ${TARGET};` },
+  { n:12, c:`    addrs[1] = ${TARGET};` },
+  { n:13, c:`    addrs[2] = ${TARGET};` },
+  { n:14, c:`    addrs[3] = ${TARGET};` },
+  { n:15, c:`    <span class="comment">// trigger syscall that places these</span>` },
+  { n:16, c:`    <span class="comment">// on the kernel stack, then returns</span>` },
+  { n:17, c:`    ioctl(fd, DUMMY_CMD, addrs);` },
+  { n:18, c:`}` },
+  { n:19, c:`` },
+  { n:20, c:`<span class="pp">/* ---- KERNEL: v4l2-compat-ioctl32.c ---- */</span>` },
+  { n:21, c:`` },
+  { n:22, c:`<span class="kw">struct</span> <span class="tp">v4l2_buffer</span> {` },
+  { n:23, c:`    <span class="kw">__u32</span>  index;` },
+  { n:24, c:`    <span class="kw">__u32</span>  type;` },
+  { n:25, c:`    <span class="kw">__u32</span>  bytesused;` },
+  { n:26, c:`    <span class="kw">__u32</span>  flags;` },
+  { n:27, c:`    ...` },
+  { n:28, c:`    <span class="kw">union</span> {` },
+  { n:29, c:`        <span class="kw">__u32</span>   offset;` },
+  { n:30, c:`        <span class="kw">unsigned long</span> userptr; <span class="comment">// !</span>` },
+  { n:31, c:`    } m;` },
+  { n:32, c:`    ...` },
+  { n:33, c:`};` },
+  { n:34, c:`` },
+  { n:35, c:`<span class="kw">static long</span> <span class="fn">do_video_ioctl</span>(...) {` },
+  { n:36, c:`    <span class="kw">struct</span> <span class="tp">v4l2_buffer</span> kbuf;` },
+  { n:37, c:`    <span class="comment">// NO memset! kbuf is on the stack.</span>` },
+  { n:38, c:`` },
+  { n:39, c:`    <span class="comment">// 32-bit compat path: only copies</span>` },
+  { n:40, c:`    <span class="comment">// the 32-bit fields from userspace</span>` },
+  { n:41, c:`    <span class="fn">get_v4l2_buffer32</span>(&kbuf, uarg);` },
+  { n:42, c:`    <span class="comment">// ↑ copies index, type, flags, etc.</span>` },
+  { n:43, c:`    <span class="comment">// but m.userptr is 64-bit in kernel</span>` },
+  { n:44, c:`    <span class="comment">// and only 32 bits are written!</span>` },
+  { n:45, c:`    <span class="comment">// Upper 32 bits = STALE STACK DATA</span>` },
+  { n:46, c:`` },
+  { n:47, c:`    <span class="comment">// Kernel uses kbuf.m.userptr as</span>` },
+  { n:48, c:`    <span class="comment">// source/dest for copy_from/to_user</span>` },
+  { n:49, c:`    <span class="fn">video_usercopy</span>(file, cmd, &kbuf);` },
+  { n:50, c:`    <span class="comment">// → copies data TO kbuf.m.userptr</span>` },
+  { n:51, c:`    <span class="comment">//   which attacker controls!</span>` },
+  { n:52, c:`}` },
+  { n:53, c:`` },
+  { n:54, c:`<span class="pp">/* ---- EXPLOIT RESULT ---- */</span>` },
+  { n:55, c:`<span class="comment">// kbuf.m.userptr == ${TARGET}</span>` },
+  { n:56, c:`<span class="comment">// kernel does: copy_to_user(${TARGET}, ...)</span>` },
+  { n:57, c:`<span class="comment">// → ARBITRARY WRITE to attacker address</span>` },
+  { n:58, c:`<span class="comment">// (or read, depending on ioctl direction)</span>` },
+];
+
+const steps = [
+  {
+    stack: [
+      ['0xd020', 'ret → syscall', 'saved rip',   'hl-blue',  false],
+      ['0xd018', TARGET,          'addrs[3]',     'hl-orange', false],
+      ['0xd010', TARGET,          'addrs[2]',     'hl-orange', false],
+      ['0xd008', TARGET,          'addrs[1]',     'hl-orange', false],
+      ['0xd000', TARGET,          'addrs[0]',     'hl-orange', false],
+      ['0xcff8', '···',           '',              '',         false],
+      ['0xcff0', '···',           '',              '',         false],
+      ['0xcfe8', '···',           '',              '',         false],
+    ],
+    narration: `The attacker triggers a syscall/ioctl that places controlled values on the <strong>kernel stack</strong>. They fill local variables with <span class="warn">${TARGET}</span> — the address they want to read from or write to.<br><br>This is the <strong>"stack spray"</strong> phase: saturating a stack region with a chosen pointer value.`,
+    hl: [3,4,5,6,7,9,10,11,12,13,14,15,16,17,18],
+    hlR: [],
+    scroll: 9,
+    showArrow: false,
+  },
+  {
+    stack: [
+      ['0xd020', TARGET,          '(stale)',       'stale',    false],
+      ['0xd018', TARGET,          '(stale)',       'stale',    false],
+      ['0xd010', TARGET,          '(stale)',       'stale',    false],
+      ['0xd008', TARGET,          '(stale)',       'stale',    false],
+      ['0xd000', TARGET,          '(stale)',       'stale',    false],
+      ['0xcff8', '···',           '',              '',         false],
+      ['0xcff0', '···',           '',              '',         false],
+      ['0xcfe8', '···',           '',              '',         false],
+    ],
+    narration: `The spray function returns. The kernel stack pointer moves back, but the memory is <strong>never zeroed</strong>.<br><br><span class="warn">${TARGET}</span> persists across the entire region. The trap is set.`,
+    hl: [17, 18],
+    hlR: [],
+    scroll: 17,
+    showArrow: false,
+  },
+  {
+    stack: [
+      ['0xd020', 'ret → caller',  'saved rip',    'hl-blue',  false],
+      ['0xd018', '0x00000000',    'kbuf.index',   'hl-green', false],
+      ['0xd010', '0x00000001',    'kbuf.type',    'hl-green', false],
+      ['0xd008', '0x00000002',    'kbuf.flags',   'hl-green', false],
+      ['0xd000', '···',           'kbuf...',       'hl-green', false],
+      ['0xcff8', '',              '',              '',         true],
+      ['0xcff0', TARGET,          'kbuf.m (hi32)','hl-red',   false],
+      ['0xcfe8', '0x7fff1234',    'kbuf.m (lo32)','hl-green', false],
+    ],
+    narration: `The attacker triggers the <strong>v4l2 compat ioctl</strong>. The handler allocates <code>struct v4l2_buffer kbuf</code> on the kernel stack — <strong>no memset</strong>.<br><br><code>get_v4l2_buffer32()</code> copies the 32-bit compat fields from userspace. But <code>m.userptr</code> is <strong>64 bits</strong> in the kernel struct — only the <span class="ok">lower 32 bits</span> are written from the compat struct. The <span class="danger">upper 32 bits remain stale</span> from the spray!`,
+    hl: [35,36,37,38,39,40,41,42,43,44],
+    hlR: [45],
+    scroll: 35,
+    showArrow: false,
+  },
+  {
+    stack: [
+      ['0xd020', 'ret → caller',  'saved rip',    'hl-blue',  false],
+      ['0xd018', '0x00000000',    'kbuf.index',   '',         false],
+      ['0xd010', '0x00000001',    'kbuf.type',    '',         false],
+      ['0xd008', '0x00000002',    'kbuf.flags',   '',         false],
+      ['0xd000', '···',           'kbuf...',       '',         false],
+      ['0xcff8', '',              '',              '',         true],
+      ['0xcff0', TARGET,          '← STALE hi32', 'hl-red',   false],
+      ['0xcfe8', '0x7fff1234',    '← user lo32',  'hl-green', false],
+    ],
+    narration: `The combined 64-bit <code>kbuf.m.userptr</code> is now:<br><br><code><span class="danger">${TARGET}</span><span class="ok">7fff1234</span></code><br><br>The attacker controls the <span class="danger">upper 32 bits</span> via the spray, and the <span class="ok">lower 32 bits</span> via the compat ioctl argument. Together they form a <strong>fully controlled 64-bit pointer</strong>.<br><br>The kernel is about to use this pointer in <code>copy_to_user()</code>...`,
+    hl: [47,48,49],
+    hlR: [50, 51],
+    scroll: 47,
+    showArrow: false,
+  },
+  {
+    stack: [
+      ['0xd020', 'ret → caller',  'saved rip',    'hl-blue',  false],
+      ['0xd018', '0x00000000',    'kbuf.index',   '',         false],
+      ['0xd010', '0x00000001',    'kbuf.type',    '',         false],
+      ['0xd008', '0x00000002',    'kbuf.flags',   '',         false],
+      ['0xd000', '···',           'kbuf...',       '',         false],
+      ['0xcff8', '',              '',              '',         true],
+      ['0xcff0', TARGET,          '← CONTROLLED', 'hl-red',   false],
+      ['0xcfe8', '0x7fff1234',    '← CONTROLLED', 'hl-red',   false],
+    ],
+    narration: `<span class="danger">⚡ ARBITRARY WRITE!</span><br><br>The kernel calls <code>copy_to_user(kbuf.m.userptr, ...)</code> — writing kernel data to <span class="danger">${TARGET}7fff1234</span>, an address fully controlled by the attacker.<br><br>Depending on the ioctl direction, this enables:<br>• <span class="danger">Arbitrary write</span> — overwrite kernel structures<br>• <span class="danger">Arbitrary read</span> — read kernel memory into userspace<br><br>The root cause: <strong>partial initialization</strong> of a 64-bit field from a 32-bit compat source, leaving the upper half as attacker-sprayed stack data.`,
+    hl: [54],
+    hlR: [55, 56, 57, 58],
+    scroll: 54,
+    showArrow: true,
+  },
+];
+
+const stackEl = document.getElementById('stack');
+const narrEl  = document.getElementById('narration');
+const codeEl  = document.getElementById('code-view');
+const arrowEl = document.getElementById('rw-arrow');
+const btns    = document.querySelectorAll('.step-btn');
+
+function renderStack(rows) {
+  stackEl.innerHTML = rows.map(([addr, val, name, cls, isSep]) => {
+    if (isSep) return `<div class="sep-row">── kbuf.m.userptr (64-bit) ──</div>`;
+    return `<div class="mem-row ${cls}">
+      <div class="mem-addr">${addr}</div>
+      <div class="mem-val">${val}</div>
+      <div class="mem-name">${name}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderCode(hl, hlR) {
+  return SRC.map(l => {
+    const r = hlR.includes(l.n) ? 'code-line hl-red' : hl.includes(l.n) ? 'code-line hl' : 'code-line';
+    return `<span class="${r}" data-line="${l.n}">${l.c || ' '}</span>`;
+  }).join('\n');
+}
+
+function render(i) {
+  const s = steps[i];
+  renderStack(s.stack);
+  narrEl.innerHTML = s.narration;
+  codeEl.innerHTML = renderCode(s.hl, s.hlR);
+  arrowEl.classList.toggle('visible', s.showArrow);
+  requestAnimationFrame(() => {
+    const t = codeEl.querySelector(`[data-line="${s.scroll}"]`);
+    if (t) t.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  });
+  btns.forEach(b => b.classList.toggle('active', +b.dataset.step === i));
+}
+
+btns.forEach(b => b.addEventListener('click', () => render(+b.dataset.step)));
+render(0);
+</script>
+</body>
+</html>

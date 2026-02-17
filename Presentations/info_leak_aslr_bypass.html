@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Info Leak — Uninitialized Kernel Memory → ASLR Bypass</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Space+Grotesk:wght@400;600;700&display=swap');
+
+  :root {
+    --bg: #0a0e17;
+    --surface: #111827;
+    --border: #1e293b;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --green: #22c55e;
+    --green-dim: rgba(34, 197, 94, 0.12);
+    --red: #ef4444;
+    --red-dim: rgba(239, 68, 68, 0.12);
+    --amber: #f59e0b;
+    --amber-dim: rgba(245, 158, 11, 0.12);
+    --blue: #3b82f6;
+    --blue-dim: rgba(59, 130, 246, 0.12);
+    --purple: #a78bfa;
+    --purple-dim: rgba(167, 139, 250, 0.12);
+    --cyan: #22d3ee;
+    --pink: #f472b6;
+    --pink-dim: rgba(244, 114, 182, 0.12);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Space Grotesk', sans-serif;
+    min-height: 100vh;
+    padding: 1.5rem;
+    overflow-x: hidden;
+  }
+
+  h1 {
+    font-size: 1.4rem;
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 0.25rem;
+    letter-spacing: -0.02em;
+    background: linear-gradient(135deg, var(--red), var(--amber));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .subtitle {
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.8rem;
+    margin-bottom: 1.5rem;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* --- Controls --- */
+  .controls {
+    display: flex;
+    justify-content: center;
+    gap: 0.4rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+  }
+
+  .step-btn {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.68rem;
+    padding: 0.45rem 0.85rem;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface);
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+
+  .step-btn:hover { border-color: var(--cyan); color: var(--text); }
+
+  .step-btn.active {
+    border-color: var(--cyan);
+    color: var(--cyan);
+    background: rgba(34, 211, 238, 0.06);
+    box-shadow: 0 0 20px rgba(34, 211, 238, 0.08);
+  }
+
+  /* --- Main layout --- */
+  .main-layout {
+    display: grid;
+    grid-template-columns: 1fr 560px 1fr;
+    gap: 1.5rem;
+    max-width: 1200px;
+    margin: 0 auto;
+    align-items: start;
+  }
+
+  @media (max-width: 1000px) {
+    .main-layout {
+      grid-template-columns: 1fr;
+      gap: 1.2rem;
+    }
+  }
+
+  /* --- Memory Diagrams --- */
+  .mem-columns {
+    display: grid;
+    grid-template-columns: 1fr 60px 1fr;
+    gap: 0;
+    align-items: start;
+  }
+
+  .mem-container { display: flex; flex-direction: column; align-items: center; }
+
+  .mem-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .mem-label .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+  }
+
+  .mem-label .dot.kernel { background: var(--amber); }
+  .mem-label .dot.user { background: var(--blue); }
+
+  .mem-table {
+    width: 240px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--surface);
+  }
+
+  .mem-row {
+    display: grid;
+    grid-template-columns: 56px 1fr 72px;
+    border-bottom: 1px solid var(--border);
+    transition: all 0.4s ease;
+    min-height: 34px;
+    align-items: center;
+  }
+
+  .mem-row:last-child { border-bottom: none; }
+
+  .mem-addr {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.55rem;
+    color: var(--muted);
+    padding: 0.35rem 0.4rem;
+    text-align: right;
+    border-right: 1px solid var(--border);
+  }
+
+  .mem-val {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    padding: 0.35rem 0.5rem;
+    transition: all 0.4s ease;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .mem-name {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.55rem;
+    padding: 0.35rem 0.4rem;
+    text-align: right;
+    color: var(--muted);
+    border-left: 1px solid var(--border);
+  }
+
+  .mem-row.highlight-green { background: var(--green-dim); }
+  .mem-row.highlight-green .mem-val { color: var(--green); font-weight: 600; }
+  .mem-row.highlight-red { background: var(--red-dim); }
+  .mem-row.highlight-red .mem-val { color: var(--red); font-weight: 600; }
+  .mem-row.highlight-amber { background: var(--amber-dim); }
+  .mem-row.highlight-amber .mem-val { color: var(--amber); font-weight: 600; }
+  .mem-row.highlight-blue { background: var(--blue-dim); }
+  .mem-row.highlight-blue .mem-val { color: var(--blue); font-weight: 600; }
+  .mem-row.highlight-purple { background: var(--purple-dim); }
+  .mem-row.highlight-purple .mem-val { color: var(--purple); font-weight: 600; }
+  .mem-row.highlight-pink { background: var(--pink-dim); }
+  .mem-row.highlight-pink .mem-val { color: var(--pink); font-weight: 600; }
+  .mem-row.stale { opacity: 0.55; }
+
+  /* --- Copy arrow column --- */
+  .arrow-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    padding-top: 3rem;
+    gap: 0.3rem;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+  }
+
+  .arrow-col.visible { opacity: 1; }
+
+  .copy-arrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.4rem;
+    color: var(--red);
+    animation: arrowPulse 1.5s ease-in-out infinite;
+  }
+
+  .copy-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.5rem;
+    color: var(--red);
+    text-align: center;
+    writing-mode: horizontal-tb;
+  }
+
+  @keyframes arrowPulse {
+    0%, 100% { opacity: 0.4; transform: translateX(0); }
+    50% { opacity: 1; transform: translateX(3px); }
+  }
+
+  .addr-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.5rem;
+    color: var(--muted);
+    letter-spacing: 0.05em;
+    margin: 0.25rem 0;
+    text-align: center;
+    opacity: 0.6;
+  }
+
+  /* --- Side panels --- */
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.85rem;
+    min-height: 200px;
+    transition: all 0.3s ease;
+  }
+
+  .panel-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--cyan);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    margin-bottom: 0.65rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .panel-title::before {
+    content: '';
+    display: inline-block;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--cyan);
+  }
+
+  .narration {
+    font-size: 0.78rem;
+    line-height: 1.6;
+    color: var(--text);
+  }
+
+  .narration strong { color: var(--cyan); font-weight: 600; }
+  .narration code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.68rem;
+    background: rgba(34, 211, 238, 0.08);
+    padding: 0.08rem 0.3rem;
+    border-radius: 3px;
+    color: var(--cyan);
+  }
+
+  .narration .danger { color: var(--red); }
+  .narration .warn { color: var(--amber); }
+  .narration .ok { color: var(--green); }
+  .narration .leak { color: var(--pink); }
+
+  /* --- Code panel --- */
+  .code-block {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.56rem;
+    line-height: 1.5;
+    white-space: pre;
+    color: var(--muted);
+    max-height: 480px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  .code-block::-webkit-scrollbar { width: 4px; }
+  .code-block::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+  .code-line { display: block; padding: 0 0.2rem; border-left: 2px solid transparent; transition: all 0.3s ease; }
+  .code-line.hl { color: var(--text); background: rgba(34, 211, 238, 0.06); border-left-color: var(--cyan); }
+  .code-line.hl-red { color: var(--text); background: rgba(239, 68, 68, 0.08); border-left-color: var(--red); }
+  .code-line.hl-pink { color: var(--text); background: rgba(244, 114, 182, 0.08); border-left-color: var(--pink); }
+  .code-block .comment { color: #475569; }
+  .code-block .keyword { color: var(--purple); }
+  .code-block .func { color: var(--cyan); }
+  .code-block .str { color: var(--green); }
+  .code-block .prep { color: var(--amber); }
+  .code-block .type { color: var(--amber); }
+
+  /* --- ASLR result box --- */
+  .aslr-box {
+    margin-top: 0.75rem;
+    padding: 0.6rem 0.75rem;
+    border: 1px dashed var(--red);
+    border-radius: 6px;
+    background: rgba(239, 68, 68, 0.04);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    line-height: 1.6;
+    color: var(--red);
+    opacity: 0;
+    transition: opacity 0.5s ease;
+  }
+
+  .aslr-box.visible { opacity: 1; }
+  .aslr-box .label { color: var(--muted); }
+  .aslr-box .val { color: var(--red); font-weight: 600; }
+  .aslr-box .calc { color: var(--amber); }
+</style>
+</head>
+<body>
+
+<h1>Info Leak — Uninitialized Kernel Memory</h1>
+<p class="subtitle">Kernel struct padding leaks addresses to userspace → ASLR bypass</p>
+
+<div class="controls">
+  <button class="step-btn active" data-step="0">① prev kernel fn</button>
+  <button class="step-btn" data-step="1">② prev fn returns</button>
+  <button class="step-btn" data-step="2">③ ioctl handler</button>
+  <button class="step-btn" data-step="3">④ copy_to_user</button>
+  <button class="step-btn" data-step="4">⑤ userspace reads</button>
+  <button class="step-btn" data-step="5">⑥ ASLR defeated</button>
+</div>
+
+<div class="main-layout">
+
+  <!-- Left panel: narration -->
+  <div class="panel" id="narration-panel">
+    <div class="panel-title">What's happening</div>
+    <div class="narration" id="narration"></div>
+    <div class="aslr-box" id="aslr-box"></div>
+  </div>
+
+  <!-- Center: two memory columns -->
+  <div class="mem-columns">
+    <div class="mem-container">
+      <div class="mem-label"><span class="dot kernel"></span> Kernel Stack</div>
+      <div class="addr-label">▲ HIGH</div>
+      <div class="mem-table" id="kernel-mem"></div>
+      <div class="addr-label">▼ LOW</div>
+    </div>
+    <div class="arrow-col" id="copy-arrow-col">
+      <div class="copy-label">copy_to<br>_user</div>
+      <div class="copy-arrow">→</div>
+    </div>
+    <div class="mem-container">
+      <div class="mem-label"><span class="dot user"></span> Userspace Buffer</div>
+      <div class="addr-label">▲ HIGH</div>
+      <div class="mem-table" id="user-mem"></div>
+      <div class="addr-label">▼ LOW</div>
+    </div>
+  </div>
+
+  <!-- Right panel: code -->
+  <div class="panel" id="code-panel">
+    <div class="panel-title">Code context</div>
+    <div class="code-block" id="code-view"></div>
+  </div>
+
+</div>
+
+<script>
+const KERN_PTR  = '0xffffa1c0';
+const KERN_PTR2 = '0xffffa340';
+const KASLR_BASE = '0xffff8000';
+
+const sourceLines = [
+  { n: 1,  code: `<span class="prep">#include</span> <span class="str">&lt;linux/uaccess.h&gt;</span>` },
+  { n: 2,  code: `<span class="prep">#include</span> <span class="str">&lt;linux/ioctl.h&gt;</span>` },
+  { n: 3,  code: `` },
+  { n: 4,  code: `<span class="keyword">struct</span> <span class="type">dev_info</span> {` },
+  { n: 5,  code: `    <span class="keyword">uint32_t</span> type;       <span class="comment">// 4 bytes</span>` },
+  { n: 6,  code: `    <span class="comment">// 4 bytes padding (struct alignment)</span>` },
+  { n: 7,  code: `    <span class="keyword">uint64_t</span> flags;      <span class="comment">// 8 bytes</span>` },
+  { n: 8,  code: `    <span class="keyword">uint32_t</span> status;     <span class="comment">// 4 bytes</span>` },
+  { n: 9,  code: `    <span class="comment">// 4 bytes padding</span>` },
+  { n: 10, code: `};  <span class="comment">// total: 24 bytes (with padding)</span>` },
+  { n: 11, code: `` },
+  { n: 12, code: `<span class="comment">/* Previous kernel function that leaves</span>` },
+  { n: 13, code: `<span class="comment"> * sensitive pointers on the kernel stack */</span>` },
+  { n: 14, code: `<span class="keyword">void</span> <span class="func">internal_dispatch</span>(<span class="keyword">void</span>) {` },
+  { n: 15, code: `    <span class="keyword">void</span> *handler = kmalloc_handler;` },
+  { n: 16, code: `    <span class="keyword">struct</span> task *ctx = current_task;` },
+  { n: 17, code: `    <span class="keyword">uint64_t</span> token = auth_token;` },
+  { n: 18, code: `    <span class="comment">// ... does work, then returns</span>` },
+  { n: 19, code: `    <span class="comment">// stack NOT zeroed on return</span>` },
+  { n: 20, code: `}` },
+  { n: 21, code: `` },
+  { n: 22, code: `<span class="comment">/* VULNERABLE ioctl handler */</span>` },
+  { n: 23, code: `<span class="keyword">long</span> <span class="func">dev_ioctl</span>(<span class="keyword">struct</span> file *f,` },
+  { n: 24, code: `              <span class="keyword">unsigned int</span> cmd,` },
+  { n: 25, code: `              <span class="keyword">unsigned long</span> arg) {` },
+  { n: 26, code: `` },
+  { n: 27, code: `    <span class="keyword">struct</span> <span class="type">dev_info</span> info;  <span class="comment">// ON STACK!</span>` },
+  { n: 28, code: `` },
+  { n: 29, code: `    <span class="comment">// Only named fields are set.</span>` },
+  { n: 30, code: `    <span class="comment">// Padding bytes are NEVER initialized!</span>` },
+  { n: 31, code: `    info.type   = 0x02;` },
+  { n: 32, code: `    info.flags  = 0x1F;` },
+  { n: 33, code: `    info.status = 0x01;` },
+  { n: 34, code: `` },
+  { n: 35, code: `    <span class="comment">// BUG: copies entire struct including</span>` },
+  { n: 36, code: `    <span class="comment">// uninitialized padding to userspace!</span>` },
+  { n: 37, code: `    <span class="func">copy_to_user</span>((<span class="keyword">void</span> *)arg,` },
+  { n: 38, code: `                &info, <span class="keyword">sizeof</span>(info));` },
+  { n: 39, code: `` },
+  { n: 40, code: `    <span class="keyword">return</span> 0;` },
+  { n: 41, code: `}` },
+  { n: 42, code: `` },
+  { n: 43, code: `<span class="comment">/* ---- USERSPACE EXPLOIT ---- */</span>` },
+  { n: 44, code: `<span class="prep">#include</span> <span class="str">&lt;stdio.h&gt;</span>` },
+  { n: 45, code: `<span class="prep">#include</span> <span class="str">&lt;sys/ioctl.h&gt;</span>` },
+  { n: 46, code: `<span class="prep">#include</span> <span class="str">&lt;fcntl.h&gt;</span>` },
+  { n: 47, code: `` },
+  { n: 48, code: `<span class="keyword">int</span> <span class="func">main</span>() {` },
+  { n: 49, code: `    <span class="keyword">int</span> fd = open(<span class="str">"/dev/vuln"</span>, O_RDWR);` },
+  { n: 50, code: `    <span class="keyword">uint8_t</span> buf[24] = {0};` },
+  { n: 51, code: `` },
+  { n: 52, code: `    ioctl(fd, GET_DEV_INFO, buf);` },
+  { n: 53, code: `` },
+  { n: 54, code: `    <span class="comment">// Read leaked kernel ptr from padding</span>` },
+  { n: 55, code: `    <span class="keyword">uint64_t</span> leaked;` },
+  { n: 56, code: `    memcpy(&leaked, buf + 16, 8);` },
+  { n: 57, code: `` },
+  { n: 58, code: `    printf(<span class="str">"Leaked: %p\\n"</span>, leaked);` },
+  { n: 59, code: `    <span class="keyword">uint64_t</span> kaslr_base =` },
+  { n: 60, code: `        leaked & ~0xFFFFFULL;` },
+  { n: 61, code: `    printf(<span class="str">"KASLR base: %p\\n"</span>,` },
+  { n: 62, code: `           kaslr_base);` },
+  { n: 63, code: `    <span class="comment">// ASLR defeated. Build ROP chain.</span>` },
+  { n: 64, code: `}` },
+];
+
+const steps = [
+  {
+    kernel: [
+      ['0xc800', 'ret addr',    'saved rip',  'highlight-blue'],
+      ['0xc7f8', KERN_PTR,      '*handler',   'highlight-amber'],
+      ['0xc7f0', KERN_PTR2,     '*ctx',       'highlight-amber'],
+      ['0xc7e8', '0x9e3f71a0',  'token',      'highlight-amber'],
+      ['0xc7e0', '···',         '',            ''],
+      ['0xc7d8', '···',         '',            ''],
+      ['0xc7d0', '···',         '',            ''],
+    ],
+    user: [
+      ['0x7f00', '0x00',  'buf[20-23]', ''],
+      ['0x7ef8', '0x00',  'buf[12-19]', ''],
+      ['0x7ef0', '0x00',  'buf[4-11]',  ''],
+      ['0x7ee8', '0x00',  'buf[0-3]',   ''],
+    ],
+    showArrow: false,
+    narration: `<code>internal_dispatch()</code> runs in kernel space. It stores sensitive kernel pointers on the stack: a <span class="warn">kmalloc handler address</span>, a <span class="warn">task struct pointer</span>, and an <span class="warn">auth token</span>.<br><br>These are real kernel addresses that reveal the KASLR memory layout.`,
+    hlLines: [14, 15, 16, 17, 18, 19, 20],
+    hlRedLines: [],
+    hlPinkLines: [],
+    scrollTo: 14,
+    showAslr: false,
+  },
+  {
+    kernel: [
+      ['0xc800', KERN_PTR,      '(stale)',  'stale'],
+      ['0xc7f8', KERN_PTR,      '(stale)',  'stale'],
+      ['0xc7f0', KERN_PTR2,     '(stale)',  'stale'],
+      ['0xc7e8', '0x9e3f71a0',  '(stale)',  'stale'],
+      ['0xc7e0', '···',         '',          ''],
+      ['0xc7d8', '···',         '',          ''],
+      ['0xc7d0', '···',         '',          ''],
+    ],
+    user: [
+      ['0x7f00', '0x00',  'buf[20-23]', ''],
+      ['0x7ef8', '0x00',  'buf[12-19]', ''],
+      ['0x7ef0', '0x00',  'buf[4-11]',  ''],
+      ['0x7ee8', '0x00',  'buf[0-3]',   ''],
+    ],
+    showArrow: false,
+    narration: `<code>internal_dispatch()</code> returns. The stack pointer moves back, but the <strong>kernel never zeroes freed stack frames</strong>.<br><br>The sensitive addresses <span class="warn">${KERN_PTR}</span> and <span class="warn">${KERN_PTR2}</span> are still sitting in memory as <strong>stale residue</strong>.`,
+    hlLines: [19, 20],
+    hlRedLines: [],
+    hlPinkLines: [],
+    scrollTo: 18,
+    showAslr: false,
+  },
+  {
+    kernel: [
+      ['0xc800', 'ret addr',     'saved rip',    'highlight-blue'],
+      ['0xc7f8', '0x00000002',   'info.type',    'highlight-green'],
+      ['0xc7f0', KERN_PTR2,      'PADDING!',     'highlight-red'],
+      ['0xc7e8', '0x0000001f',   'info.flags',   'highlight-green'],
+      ['0xc7e0', '0x00000001',   'info.status',  'highlight-green'],
+      ['0xc7d8', '0x9e3f71a0',   'PADDING!',     'highlight-red'],
+      ['0xc7d0', '···',          '',              ''],
+    ],
+    user: [
+      ['0x7f00', '0x00',  'buf[20-23]', ''],
+      ['0x7ef8', '0x00',  'buf[12-19]', ''],
+      ['0x7ef0', '0x00',  'buf[4-11]',  ''],
+      ['0x7ee8', '0x00',  'buf[0-3]',   ''],
+    ],
+    showArrow: false,
+    narration: `<code>dev_ioctl()</code> is called. It allocates <code>struct dev_info info</code> on the stack — overlapping the region from the previous call.<br><br>The named fields (<span class="ok">type</span>, <span class="ok">flags</span>, <span class="ok">status</span>) are set. But the <span class="danger">padding bytes</span> between them are <strong>never initialized</strong> and still contain the stale kernel pointers!<br><br>This is caused by <strong>struct alignment</strong>: the compiler inserts padding to align fields to their natural boundaries.`,
+    hlLines: [4, 5, 6, 7, 8, 9, 10, 23, 24, 25, 27, 31, 32, 33],
+    hlRedLines: [29, 30],
+    hlPinkLines: [],
+    scrollTo: 27,
+    showAslr: false,
+  },
+  {
+    kernel: [
+      ['0xc800', 'ret addr',     'saved rip',    'highlight-blue'],
+      ['0xc7f8', '0x00000002',   'info.type',    'highlight-green'],
+      ['0xc7f0', KERN_PTR2,      'PADDING!',     'highlight-red'],
+      ['0xc7e8', '0x0000001f',   'info.flags',   'highlight-green'],
+      ['0xc7e0', '0x00000001',   'info.status',  'highlight-green'],
+      ['0xc7d8', '0x9e3f71a0',   'PADDING!',     'highlight-red'],
+      ['0xc7d0', '···',          '',              ''],
+    ],
+    user: [
+      ['0x7f00', '0x9e3f71a0',   'LEAKED!',    'highlight-red'],
+      ['0x7ef8', '0x00000001',   'status',     'highlight-green'],
+      ['0x7ef0', '0x0000001f',   'flags',      'highlight-green'],
+      ['0x7ee8', KERN_PTR2,      'LEAKED!',    'highlight-red'],
+      ['0x7ee0', '0x00000002',   'type',       'highlight-green'],
+    ],
+    showArrow: true,
+    narration: `<code>copy_to_user()</code> copies the <strong>entire 24-byte struct</strong> — including padding — to the user's buffer.<br><br>The attacker now has a copy of the kernel data. The <span class="ok">legitimate fields</span> (type, flags, status) are fine, but hidden in the <span class="danger">padding bytes</span> are real kernel addresses: <span class="danger">${KERN_PTR2}</span> and <span class="danger">0x9e3f71a0</span>.`,
+    hlLines: [37, 38],
+    hlRedLines: [35, 36],
+    hlPinkLines: [],
+    scrollTo: 35,
+    showAslr: false,
+  },
+  {
+    kernel: [
+      ['0xc800', 'ret addr',     'saved rip',    ''],
+      ['0xc7f8', '0x00000002',   'info.type',    ''],
+      ['0xc7f0', KERN_PTR2,      'PADDING!',     'stale'],
+      ['0xc7e8', '0x0000001f',   'info.flags',   ''],
+      ['0xc7e0', '0x00000001',   'info.status',  ''],
+      ['0xc7d8', '0x9e3f71a0',   'PADDING!',     'stale'],
+      ['0xc7d0', '···',          '',              ''],
+    ],
+    user: [
+      ['0x7f00', '0x9e3f71a0',   'LEAKED!',   'highlight-pink'],
+      ['0x7ef8', '0x00000001',   'status',    ''],
+      ['0x7ef0', '0x0000001f',   'flags',     ''],
+      ['0x7ee8', KERN_PTR2,      'LEAKED!',   'highlight-pink'],
+      ['0x7ee0', '0x00000002',   'type',      ''],
+    ],
+    showArrow: false,
+    narration: `Back in userspace, the attacker reads the buffer byte-by-byte. At offset <code>+4</code> (first padding gap) and offset <code>+20</code> (second padding gap), they find <span class="leak">kernel pointers</span> that should never have left kernel space.<br><br>These are <strong>real kernel virtual addresses</strong> randomized by KASLR.`,
+    hlLines: [54, 55, 56, 58],
+    hlRedLines: [],
+    hlPinkLines: [55, 56],
+    scrollTo: 54,
+    showAslr: false,
+  },
+  {
+    kernel: [
+      ['0xc800', 'ret addr',     'saved rip',    ''],
+      ['0xc7f8', '0x00000002',   'info.type',    ''],
+      ['0xc7f0', KERN_PTR2,      'PADDING!',     'stale'],
+      ['0xc7e8', '0x0000001f',   'info.flags',   ''],
+      ['0xc7e0', '0x00000001',   'info.status',  ''],
+      ['0xc7d8', '0x9e3f71a0',   'PADDING!',     'stale'],
+      ['0xc7d0', '···',          '',              ''],
+    ],
+    user: [
+      ['0x7f00', '0x9e3f71a0',   'LEAKED!',   'highlight-pink'],
+      ['0x7ef8', '0x00000001',   'status',    ''],
+      ['0x7ef0', '0x0000001f',   'flags',     ''],
+      ['0x7ee8', KERN_PTR2,      'LEAKED!',   'highlight-pink'],
+      ['0x7ee0', '0x00000002',   'type',      ''],
+    ],
+    showArrow: false,
+    narration: `<span class="danger">⚡ ASLR DEFEATED!</span><br><br>The attacker masks the leaked pointer to recover the <strong>KASLR base address</strong>. With this, every kernel symbol's runtime address is now computable.<br><br>The attacker can build a <span class="danger">ROP chain</span> targeting exact gadget addresses — the kernel's address randomization is useless.`,
+    hlLines: [59, 60, 61, 62, 63],
+    hlRedLines: [],
+    hlPinkLines: [59, 60],
+    scrollTo: 58,
+    showAslr: true,
+  },
+];
+
+const kernelEl = document.getElementById('kernel-mem');
+const userEl = document.getElementById('user-mem');
+const narrationEl = document.getElementById('narration');
+const codeEl = document.getElementById('code-view');
+const arrowCol = document.getElementById('copy-arrow-col');
+const aslrBox = document.getElementById('aslr-box');
+const buttons = document.querySelectorAll('.step-btn');
+
+function renderMem(el, rows) {
+  el.innerHTML = rows.map(([addr, val, name, cls]) =>
+    `<div class="mem-row ${cls}">
+      <div class="mem-addr">${addr}</div>
+      <div class="mem-val">${val}</div>
+      <div class="mem-name">${name}</div>
+    </div>`
+  ).join('');
+}
+
+function renderCode(hlLines, hlRedLines, hlPinkLines) {
+  return sourceLines.map(line => {
+    const isPink = hlPinkLines.includes(line.n);
+    const isRed = hlRedLines.includes(line.n);
+    const isHl = hlLines.includes(line.n);
+    const cls = isPink ? 'code-line hl-pink' : isRed ? 'code-line hl-red' : isHl ? 'code-line hl' : 'code-line';
+    return `<span class="${cls}" data-line="${line.n}">${line.code || ' '}</span>`;
+  }).join('\n');
+}
+
+function render(stepIndex) {
+  const step = steps[stepIndex];
+
+  renderMem(kernelEl, step.kernel);
+  renderMem(userEl, step.user);
+
+  narrationEl.innerHTML = step.narration;
+  codeEl.innerHTML = renderCode(step.hlLines, step.hlRedLines, step.hlPinkLines);
+
+  arrowCol.classList.toggle('visible', step.showArrow);
+
+  // ASLR result box
+  if (step.showAslr) {
+    aslrBox.innerHTML =
+      `<span class="label">Leaked ptr:</span>  <span class="val">${KERN_PTR2}</span>\n` +
+      `<span class="label">Mask:      </span>  <span class="calc">& ~0xFFFFF</span>\n` +
+      `<span class="label">KASLR base:</span>  <span class="val">${KASLR_BASE}</span>\n\n` +
+      `<span class="label">💀 All kernel symbols now at:</span>\n` +
+      `<span class="calc">   ${KASLR_BASE} + known_offset</span>`;
+    aslrBox.classList.add('visible');
+  } else {
+    aslrBox.classList.remove('visible');
+  }
+
+  // Scroll code
+  requestAnimationFrame(() => {
+    const target = codeEl.querySelector(`[data-line="${step.scrollTo}"]`);
+    if (target) target.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  });
+
+  buttons.forEach(b => b.classList.toggle('active', +b.dataset.step === stepIndex));
+}
+
+buttons.forEach(btn => {
+  btn.addEventListener('click', () => render(+btn.dataset.step));
+});
+
+render(0);
+</script>
+</body>
+</html>

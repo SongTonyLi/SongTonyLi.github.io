@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stack Spray Visualization</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Space+Grotesk:wght@400;600;700&display=swap');
+
+  :root {
+    --bg: #0a0e17;
+    --surface: #111827;
+    --border: #1e293b;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --green: #22c55e;
+    --green-dim: rgba(34, 197, 94, 0.12);
+    --red: #ef4444;
+    --red-dim: rgba(239, 68, 68, 0.12);
+    --amber: #f59e0b;
+    --amber-dim: rgba(245, 158, 11, 0.12);
+    --blue: #3b82f6;
+    --blue-dim: rgba(59, 130, 246, 0.12);
+    --purple: #a78bfa;
+    --purple-dim: rgba(167, 139, 250, 0.12);
+    --cyan: #22d3ee;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Space Grotesk', sans-serif;
+    min-height: 100vh;
+    padding: 2rem;
+    overflow-x: hidden;
+  }
+
+  h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 0.3rem;
+    letter-spacing: -0.02em;
+    background: linear-gradient(135deg, var(--cyan), var(--green));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .subtitle {
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.85rem;
+    margin-bottom: 2rem;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .controls {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+  }
+
+  .step-btn {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface);
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .step-btn:hover { border-color: var(--cyan); color: var(--text); }
+
+  .step-btn.active {
+    border-color: var(--cyan);
+    color: var(--cyan);
+    background: rgba(34, 211, 238, 0.06);
+    box-shadow: 0 0 20px rgba(34, 211, 238, 0.08);
+  }
+
+  .main-layout {
+    display: grid;
+    grid-template-columns: 1fr 280px 1fr;
+    gap: 2rem;
+    max-width: 1000px;
+    margin: 0 auto;
+    align-items: start;
+  }
+
+  @media (max-width: 800px) {
+    .main-layout {
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+    }
+  }
+
+  /* --- Stack Diagram --- */
+  .stack-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .stack-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    margin-bottom: 0.75rem;
+  }
+
+  .stack {
+    width: 280px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--surface);
+  }
+
+  .stack-row {
+    display: grid;
+    grid-template-columns: 70px 1fr 90px;
+    border-bottom: 1px solid var(--border);
+    transition: all 0.4s ease;
+    min-height: 38px;
+    align-items: center;
+  }
+
+  .stack-row:last-child { border-bottom: none; }
+
+  .stack-addr {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--muted);
+    padding: 0.4rem 0.5rem;
+    text-align: right;
+    border-right: 1px solid var(--border);
+  }
+
+  .stack-val {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    padding: 0.4rem 0.6rem;
+    transition: all 0.4s ease;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .stack-name {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.6rem;
+    padding: 0.4rem 0.5rem;
+    text-align: right;
+    color: var(--muted);
+    border-left: 1px solid var(--border);
+  }
+
+  .stack-row.highlight-green { background: var(--green-dim); }
+  .stack-row.highlight-green .stack-val { color: var(--green); font-weight: 600; }
+  .stack-row.highlight-red { background: var(--red-dim); }
+  .stack-row.highlight-red .stack-val { color: var(--red); font-weight: 600; }
+  .stack-row.highlight-amber { background: var(--amber-dim); }
+  .stack-row.highlight-amber .stack-val { color: var(--amber); font-weight: 600; }
+  .stack-row.highlight-blue { background: var(--blue-dim); }
+  .stack-row.highlight-blue .stack-val { color: var(--blue); font-weight: 600; }
+  .stack-row.highlight-purple { background: var(--purple-dim); }
+  .stack-row.highlight-purple .stack-val { color: var(--purple); font-weight: 600; }
+  .stack-row.stale { opacity: 0.55; }
+
+  .stack-row .stack-val.poison { color: var(--red); }
+
+  /* Frame brackets */
+  .frame-group {
+    position: relative;
+  }
+  .frame-bracket {
+    position: absolute;
+    right: -22px;
+    top: 0;
+    bottom: 0;
+    width: 16px;
+    border: 1.5px solid var(--cyan);
+    border-left: none;
+    border-radius: 0 4px 4px 0;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+  }
+  .frame-bracket.visible { opacity: 1; }
+  .frame-bracket-label {
+    position: absolute;
+    right: -120px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.55rem;
+    color: var(--cyan);
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+  }
+  .frame-bracket-label.visible { opacity: 1; }
+
+  /* --- Side panels --- */
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem;
+    min-height: 200px;
+    transition: all 0.3s ease;
+  }
+
+  .panel-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--cyan);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .panel-title::before {
+    content: '';
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--cyan);
+  }
+
+  .narration {
+    font-size: 0.82rem;
+    line-height: 1.65;
+    color: var(--text);
+  }
+
+  .narration strong { color: var(--cyan); font-weight: 600; }
+  .narration code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem;
+    background: rgba(34, 211, 238, 0.08);
+    padding: 0.1rem 0.35rem;
+    border-radius: 3px;
+    color: var(--cyan);
+  }
+  .narration .danger { color: var(--red); }
+  .narration .warn { color: var(--amber); }
+  .narration .ok { color: var(--green); }
+
+  /* --- Code panel --- */
+  .code-block {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.58rem;
+    line-height: 1.55;
+    white-space: pre;
+    color: var(--muted);
+    max-height: 520px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  .code-block::-webkit-scrollbar { width: 4px; }
+  .code-block::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+  .code-line { display: block; padding: 0 0.2rem; border-left: 2px solid transparent; transition: all 0.3s ease; }
+  .code-line.hl { color: var(--text); background: rgba(34, 211, 238, 0.06); border-left-color: var(--cyan); }
+  .code-line.hl-red { color: var(--text); background: rgba(239, 68, 68, 0.08); border-left-color: var(--red); }
+  .code-block .comment { color: #475569; }
+  .code-block .keyword { color: var(--purple); }
+  .code-block .func { color: var(--cyan); }
+  .code-block .str { color: var(--green); }
+  .code-block .prep { color: var(--amber); }
+
+  /* --- Arrow indicator --- */
+  .arrow-row {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 1rem;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+  }
+  .arrow-row.visible { opacity: 1; }
+  .arrow-icon {
+    font-size: 1.2rem;
+    color: var(--red);
+    animation: pulse 1.2s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 1; }
+  }
+  .arrow-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--red);
+  }
+
+  /* High address / low address labels */
+  .addr-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.55rem;
+    color: var(--muted);
+    letter-spacing: 0.05em;
+    margin: 0.3rem 0;
+    text-align: center;
+    opacity: 0.6;
+  }
+</style>
+</head>
+<body>
+
+<h1>Stack Spray — Use Before Initialization</h1>
+<p class="subtitle">How stale stack data enables control of uninitialized pointers</p>
+
+<div class="controls">
+  <button class="step-btn active" data-step="0">① Initial Stack</button>
+  <button class="step-btn" data-step="1">② stack_spray() called</button>
+  <button class="step-btn" data-step="2">③ stack_spray() returns</button>
+  <button class="step-btn" data-step="3">④ vulnerable_function()</button>
+  <button class="step-btn" data-step="4">⑤ func_ptr() called!</button>
+</div>
+
+<div class="main-layout">
+
+  <!-- Left panel: narration -->
+  <div class="panel" id="narration-panel">
+    <div class="panel-title">What's happening</div>
+    <div class="narration" id="narration"></div>
+  </div>
+
+  <!-- Center: stack -->
+  <div class="stack-container">
+    <div class="addr-label">▲ HIGH ADDRESS (stack base)</div>
+    <div class="stack" id="stack"></div>
+    <div class="addr-label">▼ LOW ADDRESS (stack grows down)</div>
+    <div class="arrow-row" id="jump-arrow">
+      <span class="arrow-icon">⚡</span>
+      <span class="arrow-text">JUMP → secret_function!</span>
+    </div>
+  </div>
+
+  <!-- Right panel: code context -->
+  <div class="panel" id="code-panel">
+    <div class="panel-title">Code context</div>
+    <div class="code-block" id="code-view"></div>
+  </div>
+
+</div>
+
+<script>
+const SECRET_ADDR = '0x401196';
+
+// Full source code as array of [lineContent, lineNumber]
+// We'll use line numbers to highlight per step
+const sourceLines = [
+  { n: 1,  code: `<span class="prep">#include</span> <span class="str">&lt;stdio.h&gt;</span>` },
+  { n: 2,  code: `<span class="prep">#include</span> <span class="str">&lt;string.h&gt;</span>` },
+  { n: 3,  code: `` },
+  { n: 4,  code: `<span class="keyword">void</span> <span class="func">safe_function</span>() {` },
+  { n: 5,  code: `    printf(<span class="str">"Safe function called.\\n"</span>);` },
+  { n: 6,  code: `}` },
+  { n: 7,  code: `` },
+  { n: 8,  code: `<span class="keyword">void</span> <span class="func">vulnerable_function</span>(<span class="keyword">int</span> path) {` },
+  { n: 9,  code: `    <span class="keyword">void</span> (*func_ptr)();  <span class="comment">// Uninitialized!</span>` },
+  { n: 10, code: `` },
+  { n: 11, code: `    <span class="keyword">if</span> (path == 1) {` },
+  { n: 12, code: `        func_ptr = safe_function;` },
+  { n: 13, code: `    }` },
+  { n: 14, code: `` },
+  { n: 15, code: `    <span class="comment">// Bug: if path != 1, func_ptr is never</span>` },
+  { n: 16, code: `    <span class="comment">// initialized but is still called</span>` },
+  { n: 17, code: `    func_ptr();` },
+  { n: 18, code: `}` },
+  { n: 19, code: `` },
+  { n: 20, code: `<span class="comment">// This function "sprays" the stack by leaving</span>` },
+  { n: 21, code: `<span class="comment">// controlled values in the stack frame that</span>` },
+  { n: 22, code: `<span class="comment">// vulnerable_function will later reuse</span>` },
+  { n: 23, code: `<span class="keyword">void</span> <span class="func">stack_spray</span>(<span class="keyword">void</span> (*target)()) {` },
+  { n: 24, code: `    <span class="keyword">void</span> (*decoy1)() = target;` },
+  { n: 25, code: `    <span class="keyword">void</span> (*decoy2)() = target;` },
+  { n: 26, code: `    <span class="keyword">void</span> (*decoy3)() = target;` },
+  { n: 27, code: `    <span class="keyword">void</span> (*decoy4)() = target;` },
+  { n: 28, code: `    <span class="comment">// Written to stack, then function returns</span>` },
+  { n: 29, code: `    <span class="comment">// but values remain (stack isn't zeroed)</span>` },
+  { n: 30, code: `    (<span class="keyword">void</span>)decoy1; (<span class="keyword">void</span>)decoy2;` },
+  { n: 31, code: `    (<span class="keyword">void</span>)decoy3; (<span class="keyword">void</span>)decoy4;` },
+  { n: 32, code: `}` },
+  { n: 33, code: `` },
+  { n: 34, code: `<span class="keyword">void</span> <span class="func">secret_function</span>() {` },
+  { n: 35, code: `    printf(<span class="str">"!! secret_function called !!"</span>);` },
+  { n: 36, code: `}` },
+  { n: 37, code: `` },
+  { n: 38, code: `<span class="keyword">int</span> <span class="func">main</span>() {` },
+  { n: 39, code: `    <span class="func">stack_spray</span>(secret_function);` },
+  { n: 40, code: `    <span class="func">vulnerable_function</span>(0);` },
+  { n: 41, code: `    <span class="keyword">return</span> 0;` },
+  { n: 42, code: `}` },
+];
+
+// Per step: which lines to highlight (cyan) and which are danger (red)
+const steps = [
+  {
+    rows: [
+      ['0xFFE0', 'main() locals',  'main',    ''],
+      ['0xFFD8', '···',            '',        ''],
+      ['0xFFD0', '···',            '',        ''],
+      ['0xFFC8', '···',            '',        ''],
+      ['0xFFC0', '···',            '',        ''],
+      ['0xFFB8', '···',            '',        ''],
+      ['0xFFB0', '···',            '',        ''],
+      ['0xFFA8', '···',            '',        ''],
+      ['0xFFA0', '···',            '',        ''],
+    ],
+    narration: `The stack is mostly empty. <code>main()</code> is running at the top. Memory below is <strong>uninitialized</strong> — it holds whatever garbage was left from previous operations.`,
+    hlLines: [38, 39, 40, 41, 42],
+    hlRedLines: [],
+    scrollTo: 38,
+  },
+  {
+    rows: [
+      ['0xFFE0', 'main() locals',  'main',    ''],
+      ['0xFFD8', 'return → main',  'ret addr','highlight-blue'],
+      ['0xFFD0', SECRET_ADDR,      'decoy1',  'highlight-green'],
+      ['0xFFC8', SECRET_ADDR,      'decoy2',  'highlight-green'],
+      ['0xFFC0', SECRET_ADDR,      'decoy3',  'highlight-green'],
+      ['0xFFB8', SECRET_ADDR,      'decoy4',  'highlight-green'],
+      ['0xFFB0', '···',            '',        ''],
+      ['0xFFA8', '···',            '',        ''],
+      ['0xFFA0', '···',            '',        ''],
+    ],
+    narration: `<code>stack_spray()</code> is called. It creates four local variables — <code>decoy1</code> through <code>decoy4</code> — all set to <span class="ok">${SECRET_ADDR}</span> (the address of <code>secret_function</code>).<br><br>The stack frame is now <strong>saturated</strong> with the target address.`,
+    hlLines: [23, 24, 25, 26, 27, 28, 29, 30, 31, 32],
+    hlRedLines: [],
+    scrollTo: 23,
+  },
+  {
+    rows: [
+      ['0xFFE0', 'main() locals',  'main',    ''],
+      ['0xFFD8', SECRET_ADDR,      '(stale)', 'stale'],
+      ['0xFFD0', SECRET_ADDR,      '(stale)', 'stale'],
+      ['0xFFC8', SECRET_ADDR,      '(stale)', 'stale'],
+      ['0xFFC0', SECRET_ADDR,      '(stale)', 'stale'],
+      ['0xFFB8', SECRET_ADDR,      '(stale)', 'stale'],
+      ['0xFFB0', '···',            '',        ''],
+      ['0xFFA8', '···',            '',        ''],
+      ['0xFFA0', '···',            '',        ''],
+    ],
+    narration: `<code>stack_spray()</code> returns. The stack pointer moves back up, but the <strong>data is NOT erased</strong>. The values <span class="warn">${SECRET_ADDR}</span> remain as stale residue across this memory region.<br><br>This is the key insight: <strong>the stack is reused, never zeroed.</strong>`,
+    hlLines: [39],
+    hlRedLines: [],
+    scrollTo: 38,
+  },
+  {
+    rows: [
+      ['0xFFE0', 'main() locals',  'main',    ''],
+      ['0xFFD8', 'return → main',  'ret addr','highlight-blue'],
+      ['0xFFD0', SECRET_ADDR,      'func_ptr','highlight-red'],
+      ['0xFFC8', SECRET_ADDR,      '(stale)', 'stale'],
+      ['0xFFC0', SECRET_ADDR,      '(stale)', 'stale'],
+      ['0xFFB8', SECRET_ADDR,      '(stale)', 'stale'],
+      ['0xFFB0', '···',            '',        ''],
+      ['0xFFA8', '···',            '',        ''],
+      ['0xFFA0', '···',            '',        ''],
+    ],
+    narration: `<code>vulnerable_function(0)</code> is called. Its local <code>func_ptr</code> is allocated at <strong>the same address</strong> where <code>decoy1</code> used to live.<br><br>Since <code>path ≠ 1</code>, <code>func_ptr</code> is <span class="danger">never initialized</span>. It still holds the stale value: <span class="danger">${SECRET_ADDR}</span>.`,
+    hlLines: [8, 10, 11, 12, 13, 14, 15, 16, 18],
+    hlRedLines: [9, 17],
+    scrollTo: 8,
+  },
+  {
+    rows: [
+      ['0xFFE0', 'main() locals',  'main',    ''],
+      ['0xFFD8', 'return → main',  'ret addr','highlight-blue'],
+      ['0xFFD0', SECRET_ADDR,      'func_ptr','highlight-red'],
+      ['0xFFC8', SECRET_ADDR,      '(stale)', 'stale'],
+      ['0xFFC0', SECRET_ADDR,      '(stale)', 'stale'],
+      ['0xFFB8', SECRET_ADDR,      '(stale)', 'stale'],
+      ['0xFFB0', '···',            '',        ''],
+      ['0xFFA8', '···',            '',        ''],
+      ['0xFFA0', '···',            '',        ''],
+    ],
+    narration: `<span class="danger">⚡ EXPLOITED!</span> <code>func_ptr()</code> is called. Since it holds <span class="danger">${SECRET_ADDR}</span>, execution jumps to <code>secret_function</code>.<br><br>The attacker never touched <code>func_ptr</code> directly — they <strong>pre-loaded the stack</strong> with the target address and let the bug do the rest.`,
+    hlLines: [34, 35, 36],
+    hlRedLines: [17],
+    scrollTo: 15,
+  }
+];
+
+const stackEl = document.getElementById('stack');
+const narrationEl = document.getElementById('narration');
+const codeEl = document.getElementById('code-view');
+const jumpArrow = document.getElementById('jump-arrow');
+const buttons = document.querySelectorAll('.step-btn');
+let currentStep = 0;
+
+function renderCode(hlLines, hlRedLines) {
+  return sourceLines.map(line => {
+    const isRed = hlRedLines.includes(line.n);
+    const isHl = hlLines.includes(line.n);
+    const cls = isRed ? 'code-line hl-red' : isHl ? 'code-line hl' : 'code-line';
+    return `<span class="${cls}" data-line="${line.n}">${line.code || ' '}</span>`;
+  }).join('\n');
+}
+
+function render(stepIndex) {
+  const step = steps[stepIndex];
+
+  // Stack
+  stackEl.innerHTML = step.rows.map(([addr, val, name, cls]) =>
+    `<div class="stack-row ${cls}">
+      <div class="stack-addr">${addr}</div>
+      <div class="stack-val">${val}</div>
+      <div class="stack-name">${name}</div>
+    </div>`
+  ).join('');
+
+  narrationEl.innerHTML = step.narration;
+  codeEl.innerHTML = renderCode(step.hlLines, step.hlRedLines);
+
+  // Scroll code to relevant section
+  requestAnimationFrame(() => {
+    const targetLine = codeEl.querySelector(`[data-line="${step.scrollTo}"]`);
+    if (targetLine) {
+      targetLine.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }
+  });
+
+  // Jump arrow only on step 4
+  jumpArrow.classList.toggle('visible', stepIndex === 4);
+
+  // Button active state
+  buttons.forEach(b => b.classList.toggle('active', +b.dataset.step === stepIndex));
+  currentStep = stepIndex;
+}
+
+buttons.forEach(btn => {
+  btn.addEventListener('click', () => render(+btn.dataset.step));
+});
+
+// Init
+render(0);
+</script>
+</body>
+</html>
