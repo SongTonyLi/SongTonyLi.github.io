@@ -1,0 +1,1390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UBITect — Inter-Procedural Analysis Walkthrough</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Syne:wght@400;600;700;800&display=swap');
+
+  :root {
+    --bg: #0d1117;
+    --bg2: #161b22;
+    --bg3: #1f2733;
+    --teal: #2dd4bf;
+    --orange: #fb923c;
+    --yellow: #facc15;
+    --blue: #60a5fa;
+    --red: #f87171;
+    --green: #4ade80;
+    --purple: #c084fc;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --border: #2d3748;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Syne', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── Header ── */
+  header {
+    background: linear-gradient(135deg, #0d1117 0%, #1a1f2e 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 28px 48px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  header h1 {
+    font-size: 1.6rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    background: linear-gradient(90deg, var(--teal), var(--blue));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  header .subtitle {
+    font-size: 0.78rem;
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+    margin-top: 4px;
+  }
+  .badge {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.72rem;
+    color: var(--teal);
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.08em;
+  }
+
+  /* ── Pipeline bar ── */
+  .pipeline {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    padding: 20px 48px;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto;
+  }
+  .pipe-step {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 20px;
+    border: 1.5px solid var(--border);
+    border-radius: 6px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    white-space: nowrap;
+    color: var(--muted);
+    background: var(--bg);
+  }
+  .pipe-step:hover { border-color: var(--teal); color: var(--teal); }
+  .pipe-step.active { border-color: var(--teal); color: var(--teal); background: rgba(45,212,191,0.08); }
+  .pipe-step .step-num {
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: var(--bg3);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.65rem;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .pipe-step.active .step-num { background: var(--teal); color: #0d1117; }
+  .pipe-arrow {
+    color: var(--border);
+    font-size: 1.1rem;
+    margin: 0 8px;
+    flex-shrink: 0;
+  }
+
+  /* ── Main layout ── */
+  main {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    height: calc(100vh - 160px);
+  }
+
+  /* ── Code panels ── */
+  .code-panel {
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .panel-header {
+    padding: 14px 20px;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+  .panel-title {
+    font-size: 0.82rem;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .fn-badge {
+    font-size: 0.68rem;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 500;
+  }
+  .callee-badge { background: rgba(45,212,191,0.15); color: var(--teal); border: 1px solid rgba(45,212,191,0.3); }
+  .caller-badge { background: rgba(251,146,60,0.15); color: var(--orange); border: 1px solid rgba(251,146,60,0.3); }
+
+  .code-scroll { overflow-y: auto; flex: 1; padding: 16px 0; }
+
+  .code-line {
+    display: flex;
+    align-items: flex-start;
+    gap: 0;
+    padding: 2px 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    line-height: 1.7;
+    position: relative;
+    transition: background 0.3s ease;
+  }
+  .code-line:hover { background: rgba(255,255,255,0.02); }
+  .code-line.highlight-init { background: rgba(74,222,128,0.08) !important; }
+  .code-line.highlight-uninit { background: rgba(248,113,113,0.1) !important; }
+  .code-line.highlight-bug { background: rgba(248,113,113,0.18) !important; animation: pulse-red 1.2s ease infinite; }
+  .code-line.highlight-call { background: rgba(96,165,250,0.1) !important; }
+  .code-line.highlight-return { background: rgba(250,204,21,0.08) !important; }
+  .code-line.dim { opacity: 0.3; }
+
+  @keyframes pulse-red {
+    0%,100% { background: rgba(248,113,113,0.18); }
+    50% { background: rgba(248,113,113,0.30); }
+  }
+
+  .line-num {
+    width: 36px;
+    text-align: right;
+    color: var(--muted);
+    font-size: 0.72rem;
+    padding: 0 12px 0 0;
+    user-select: none;
+    flex-shrink: 0;
+  }
+  .line-gutter {
+    width: 4px;
+    height: 100%;
+    flex-shrink: 0;
+    margin-right: 12px;
+    border-radius: 2px;
+    align-self: stretch;
+    min-height: 22px;
+  }
+  .line-content { flex: 1; padding-right: 12px; }
+  .line-annotation {
+    display: none;
+    font-size: 0.68rem;
+    padding: 2px 10px;
+    border-radius: 4px;
+    margin-left: 8px;
+    align-self: center;
+    flex-shrink: 0;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .line-annotation.show { display: inline-flex; }
+  .ann-uninit { background: rgba(248,113,113,0.2); color: var(--red); border: 1px solid rgba(248,113,113,0.3); }
+  .ann-init { background: rgba(74,222,128,0.2); color: var(--green); border: 1px solid rgba(74,222,128,0.3); }
+  .ann-symbolic { background: rgba(192,132,252,0.2); color: var(--purple); border: 1px solid rgba(192,132,252,0.3); }
+  .ann-bug { background: rgba(248,113,113,0.3); color: #fca5a5; border: 1px solid var(--red); }
+  .ann-call { background: rgba(96,165,250,0.2); color: var(--blue); border: 1px solid rgba(96,165,250,0.3); }
+
+  /* syntax highlighting */
+  .kw { color: #c792ea; }
+  .ty { color: #82aaff; }
+  .fn-name { color: #82aaff; }
+  .str { color: #c3e88d; }
+  .cmt { color: #546e7a; font-style: italic; }
+  .num { color: #f78c6c; }
+  .op { color: #89ddff; }
+  .var { color: #eeffff; }
+  .ptr { color: var(--orange); }
+  .macro { color: var(--yellow); }
+
+  /* ── Right panel — Analysis ── */
+  .analysis-panel {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--bg);
+  }
+  .analysis-scroll { overflow-y: auto; flex: 1; padding: 20px; }
+
+  /* ── Step explanation card ── */
+  .step-card {
+    display: none;
+    flex-direction: column;
+    gap: 16px;
+    animation: fadeIn 0.4s ease;
+  }
+  .step-card.visible { display: flex; }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .step-title {
+    font-size: 1.15rem;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+  }
+  .step-desc {
+    font-size: 0.84rem;
+    color: #94a3b8;
+    line-height: 1.7;
+  }
+
+  /* summary box */
+  .summary-box {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .summary-box-header {
+    padding: 10px 16px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.06em;
+    border-bottom: 1px solid var(--border);
+  }
+  .summary-box-body { padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+
+  .qualifier-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 0.8rem;
+    line-height: 1.55;
+  }
+  .q-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 0.75rem;
+    padding: 2px 8px;
+    border-radius: 4px;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .q-teal { background: rgba(45,212,191,0.15); color: var(--teal); border: 1px solid rgba(45,212,191,0.3); }
+  .q-orange { background: rgba(251,146,60,0.15); color: var(--orange); border: 1px solid rgba(251,146,60,0.3); }
+  .q-yellow { background: rgba(250,204,21,0.15); color: var(--yellow); border: 1px solid rgba(250,204,21,0.3); }
+  .q-blue { background: rgba(96,165,250,0.15); color: var(--blue); border: 1px solid rgba(96,165,250,0.3); }
+  .q-red { background: rgba(248,113,113,0.15); color: var(--red); border: 1px solid rgba(248,113,113,0.3); }
+  .q-green { background: rgba(74,222,128,0.15); color: var(--green); border: 1px solid rgba(74,222,128,0.3); }
+  .q-purple { background: rgba(192,132,252,0.15); color: var(--purple); border: 1px solid rgba(192,132,252,0.3); }
+  .q-muted { background: var(--bg3); color: var(--muted); border: 1px solid var(--border); }
+  .q-text { color: #94a3b8; }
+
+  /* type inference display */
+  .type-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.73rem;
+  }
+  .type-table th {
+    text-align: left;
+    padding: 7px 10px;
+    background: var(--bg3);
+    color: var(--muted);
+    font-size: 0.68rem;
+    letter-spacing: 0.08em;
+    border-bottom: 1px solid var(--border);
+  }
+  .type-table td {
+    padding: 6px 10px;
+    border-bottom: 1px solid rgba(45,55,72,0.5);
+    vertical-align: top;
+  }
+  .type-table tr:last-child td { border-bottom: none; }
+  .type-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+  /* flow arrows between panels */
+  .flow-connector {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.76rem;
+    color: #94a3b8;
+  }
+  .flow-arrow-icon { color: var(--teal); font-size: 1.1rem; }
+
+  /* bug alert */
+  .bug-alert {
+    background: rgba(248,113,113,0.08);
+    border: 1.5px solid rgba(248,113,113,0.4);
+    border-radius: 10px;
+    padding: 14px 16px;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  .bug-icon { font-size: 1.4rem; flex-shrink: 0; }
+  .bug-text { font-size: 0.8rem; line-height: 1.6; }
+  .bug-text strong { color: var(--red); display: block; font-size: 0.88rem; margin-bottom: 4px; }
+
+  .success-alert {
+    background: rgba(74,222,128,0.08);
+    border: 1.5px solid rgba(74,222,128,0.4);
+    border-radius: 10px;
+    padding: 14px 16px;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  .success-text { font-size: 0.8rem; line-height: 1.6; }
+  .success-text strong { color: var(--green); display: block; font-size: 0.88rem; margin-bottom: 4px; }
+
+  /* nav buttons */
+  .nav-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px;
+    border-top: 1px solid var(--border);
+    background: var(--bg2);
+    flex-shrink: 0;
+  }
+  .nav-btn {
+    padding: 9px 22px;
+    border-radius: 6px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 0.8rem;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .nav-btn.primary { background: var(--teal); color: #0d1117; }
+  .nav-btn.primary:hover { background: #5eead4; transform: translateY(-1px); }
+  .nav-btn.secondary { background: var(--bg3); color: var(--text); border: 1px solid var(--border); }
+  .nav-btn.secondary:hover { border-color: var(--teal); color: var(--teal); }
+  .nav-btn:disabled { opacity: 0.3; cursor: not-allowed; transform: none !important; }
+
+  .step-indicator {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+  .step-indicator span { color: var(--teal); font-weight: 700; }
+
+  /* legend */
+  .legend {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 10px 20px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg2);
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.68rem;
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .legend-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+  }
+
+  /* tooltip */
+  .tooltip-term {
+    border-bottom: 1px dashed var(--muted);
+    cursor: help;
+    position: relative;
+  }
+
+  /* highlight transitions */
+  .highlight-fade {
+    transition: background 0.4s ease, opacity 0.4s ease;
+  }
+
+  /* cfg */
+  .cfg-container {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+  }
+  .cfg-title {
+    font-size: 0.72rem;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--muted);
+    letter-spacing: 0.06em;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+  }
+  .cfg-nodes {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    align-items: center;
+  }
+  .cfg-node {
+    padding: 8px 16px;
+    border-radius: 6px;
+    border: 1.5px solid var(--border);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.74rem;
+    text-align: center;
+    min-width: 200px;
+    transition: all 0.3s ease;
+    cursor: default;
+  }
+  .cfg-node.active-node {
+    border-color: var(--teal);
+    background: rgba(45,212,191,0.08);
+    color: var(--teal);
+  }
+  .cfg-node.bug-node {
+    border-color: var(--red);
+    background: rgba(248,113,113,0.08);
+    color: var(--red);
+    animation: pulse-red 1.2s ease infinite;
+  }
+  .cfg-node.init-node {
+    border-color: var(--green);
+    background: rgba(74,222,128,0.06);
+    color: var(--green);
+  }
+  .cfg-connector {
+    color: var(--muted);
+    font-size: 0.75rem;
+    font-family: 'JetBrains Mono', monospace;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .cfg-connector::before, .cfg-connector::after {
+    content: '';
+    width: 1px;
+    height: 16px;
+    background: var(--border);
+  }
+
+  /* call graph */
+  .callgraph {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+  }
+  .cg-fn {
+    padding: 12px 18px;
+    border-radius: 8px;
+    border: 1.5px solid var(--border);
+    text-align: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    min-width: 160px;
+  }
+  .cg-fn-name { font-weight: 700; margin-bottom: 3px; }
+  .cg-fn-role { font-size: 0.65rem; color: var(--muted); }
+  .cg-arrow {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 0 12px;
+  }
+  .cg-arrow-line {
+    width: 60px;
+    height: 2px;
+    position: relative;
+  }
+  .cg-arrow-line::after {
+    content: '►';
+    position: absolute;
+    right: -6px;
+    top: -9px;
+    font-size: 0.9rem;
+  }
+  .cg-arrow-label { font-size: 0.62rem; color: var(--muted); font-family: 'JetBrains Mono', monospace; }
+
+  .inset-tag {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.68rem;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-weight: 600;
+  }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+  /* divider */
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 4px 0;
+  }
+
+  .highlight-border-left {
+    border-left: 3px solid;
+    padding-left: 10px;
+    margin: 4px 0;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>UBITect — Inter-Procedural Analysis</h1>
+    <div class="subtitle">ESEC/FSE '20 · Zhai et al. · security/apparmor/policy.c walkthrough</div>
+  </div>
+  <div class="badge">Figure 4 · Context-Sensitive · Field-Sensitive</div>
+</header>
+
+<!-- Pipeline bar -->
+<div class="pipeline" id="pipeline">
+  <div class="pipe-step active" data-step="0" onclick="goToStep(0)">
+    <span class="step-num">①</span> Overview
+  </div>
+  <div class="pipe-arrow">─</div>
+  <div class="pipe-step" data-step="1" onclick="goToStep(1)">
+    <span class="step-num">②</span> Intra-procedural (Callee)
+  </div>
+  <div class="pipe-arrow">─</div>
+  <div class="pipe-step" data-step="2" onclick="goToStep(2)">
+    <span class="step-num">③</span> Generate Function Summary
+  </div>
+  <div class="pipe-arrow">─</div>
+  <div class="pipe-step" data-step="3" onclick="goToStep(3)">
+    <span class="step-num">④</span> Analyze Caller
+  </div>
+  <div class="pipe-arrow">─</div>
+  <div class="pipe-step" data-step="4" onclick="goToStep(4)">
+    <span class="step-num">⑤</span> Propagate Qualifiers
+  </div>
+  <div class="pipe-arrow">─</div>
+  <div class="pipe-step" data-step="5" onclick="goToStep(5)">
+    <span class="step-num">⑥</span> UBI Detected!
+  </div>
+</div>
+
+<!-- Legend -->
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot" style="background:rgba(74,222,128,0.5)"></div>initialized</div>
+  <div class="legend-item"><div class="legend-dot" style="background:rgba(248,113,113,0.5)"></div>uninitialized</div>
+  <div class="legend-item"><div class="legend-dot" style="background:rgba(192,132,252,0.5)"></div>symbolic (κ)</div>
+  <div class="legend-item"><div class="legend-dot" style="background:rgba(96,165,250,0.5)"></div>function call site</div>
+  <div class="legend-item"><div class="legend-dot" style="background:rgba(250,204,21,0.5)"></div>return path</div>
+  <div class="legend-item"><div class="legend-dot" style="background:rgba(248,113,113,0.7)"></div>⚡ UBI bug</div>
+</div>
+
+<main>
+  <!-- LEFT: Code panels -->
+  <div class="code-panel">
+    <div class="panel-header">
+      <div class="panel-title" style="color:var(--teal)">aa_splitn_fqname()</div>
+      <span class="fn-badge callee-badge">CALLEE · security/apparmor/policy.c</span>
+    </div>
+    <div class="code-scroll" id="calleeCode">
+
+      <!-- Callee code -->
+      <div class="code-line highlight-fade" id="cl-1" data-tipline="4">
+        <div class="line-num">4</div>
+        <div class="line-gutter"></div>
+        <div class="line-content"><span class="kw">const char</span> *<span class="fn-name">aa_splitn_fqname</span>(</div>
+        <div class="line-annotation" id="ann-cl-1"></div>
+      </div>
+      <div class="code-line highlight-fade" id="cl-2">
+        <div class="line-num">5</div>
+        <div class="line-gutter"></div>
+        <div class="line-content">&nbsp;&nbsp;<span class="kw">const char</span> *<span class="var">fqname</span>, <span class="ty">size_t</span> <span class="var">n</span>,</div>
+        <div class="line-annotation" id="ann-cl-2"></div>
+      </div>
+      <div class="code-line highlight-fade" id="cl-3">
+        <div class="line-num">6</div>
+        <div class="line-gutter"></div>
+        <div class="line-content">&nbsp;&nbsp;<span class="kw">const char</span> **<span class="ptr">ns_name</span>, <span class="ty">size_t</span> *<span class="ptr">ns_len</span>) {</div>
+        <div class="line-annotation" id="ann-cl-3"></div>
+      </div>
+      <div class="code-line highlight-fade" id="cl-4">
+        <div class="line-num">7</div>
+        <div class="line-gutter"></div>
+        <div class="line-content">&nbsp;&nbsp;<span class="kw">const char</span> *<span class="var">name</span> = <span class="fn-name">skipn_spaces</span>(<span class="var">fqname</span>, <span class="var">n</span>);</div>
+        <div class="line-annotation" id="ann-cl-4"></div>
+      </div>
+      <div class="code-line highlight-fade" id="cl-5">
+        <div class="line-num">8</div>
+        <div class="line-gutter"></div>
+        <div class="line-content">&nbsp;&nbsp;<span class="kw">if</span> (!<span class="var">name</span>)</div>
+        <div class="line-annotation" id="ann-cl-5"></div>
+      </div>
+      <div class="code-line highlight-fade" id="cl-6">
+        <div class="line-num">9</div>
+        <div class="line-gutter"></div>
+        <div class="line-content">&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">return</span> <span class="macro">NULL</span>; <span class="cmt">// *ns_name NOT initialized!</span></div>
+        <div class="line-annotation" id="ann-cl-6"></div>
+      </div>
+      <div class="code-line highlight-fade" id="cl-7">
+        <div class="line-num">10</div>
+        <div class="line-gutter"></div>
+        <div class="line-content">&nbsp;&nbsp;*<span class="ptr">ns_name</span> = <span class="macro">NULL</span>; <span class="cmt">// initialized only here</span></div>
+        <div class="line-annotation" id="ann-cl-7"></div>
+      </div>
+      <div class="code-line highlight-fade" id="cl-8">
+        <div class="line-num">11</div>
+        <div class="line-gutter"></div>
+        <div class="line-content">&nbsp;&nbsp;*<span class="ptr">ns_len</span> = <span class="num">0</span>;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cmt">// initialized only here</span></div>
+        <div class="line-annotation" id="ann-cl-8"></div>
+      </div>
+      <div class="code-line highlight-fade" id="cl-9">
+        <div class="line-num">12</div>
+        <div class="line-gutter"></div>
+        <div class="line-content">&nbsp;&nbsp;<span class="cmt">/* populate *ns_name ... */</span></div>
+      </div>
+      <div class="code-line highlight-fade" id="cl-10">
+        <div class="line-num">13</div>
+        <div class="line-gutter"></div>
+        <div class="line-content">&nbsp;&nbsp;<span class="kw">return</span> <span class="var">name</span>;</div>
+        <div class="line-annotation" id="ann-cl-10"></div>
+      </div>
+      <div class="code-line highlight-fade" id="cl-11">
+        <div class="line-num">14</div>
+        <div class="line-gutter"></div>
+        <div class="line-content">}</div>
+      </div>
+
+      <div class="divider" style="margin: 16px 0;"></div>
+
+      <!-- Caller code -->
+      <div class="panel-header" style="margin: 0 -1px; background: var(--bg2);">
+        <div class="panel-title" style="color:var(--orange)">aa_fqlookupn_profile()</div>
+        <span class="fn-badge caller-badge">CALLER · security/apparmor/policy.c</span>
+      </div>
+
+      <div style="height:8px"></div>
+
+      <div class="code-line highlight-fade" id="cr-1">
+        <div class="line-num">16</div>
+        <div class="line-gutter"></div>
+        <div class="line-content"><span class="kw">int</span> <span class="fn-name">aa_fqlookupn_profile</span>(</div>
+      </div>
+      <div class="code-line highlight-fade" id="cr-2">
+        <div class="line-num">17</div>
+        <div class="line-gutter"></div>
+        <div class="line-content">&nbsp;&nbsp;<span class="ty">struct aa_label</span> *<span class="var">base</span>,</div>
+      </div>
+      <div class="code-line highlight-fade" id="cr-3">
+        <div class="line-num">18</div>
+        <div class="line-gutter"></div>
+        <div class="line-content">&nbsp;&nbsp;<span class="kw">const char</span> *<span class="var">fqname</span>, <span class="ty">size_t</span> <span class="var">n</span>) {</div>
+      </div>
+      <div class="code-line highlight-fade" id="cr-4">
+        <div class="line-num">19</div>
+        <div class="line-gutter"></div>
+        <div class="line-content">&nbsp;&nbsp;<span class="kw">const char</span> *<span class="var">name</span>, *<span class="ptr">ns_name</span>; <span class="cmt">// uninitialized!</span></div>
+        <div class="line-annotation" id="ann-cr-4"></div>
+      </div>
+      <div class="code-line highlight-fade" id="cr-5">
+        <div class="line-num">20</div>
+        <div class="line-gutter"></div>
+        <div class="line-content">&nbsp;&nbsp;<span class="ty">size_t</span> <span class="ptr">ns_len</span>; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cmt">// uninitialized!</span></div>
+        <div class="line-annotation" id="ann-cr-5"></div>
+      </div>
+      <div class="code-line highlight-fade" id="cr-6">
+        <div class="line-num">21</div>
+        <div class="line-gutter"></div>
+        <div class="line-content">&nbsp;&nbsp;<span class="var">name</span> = <span class="fn-name">aa_splitn_fqname</span>(</div>
+        <div class="line-annotation" id="ann-cr-6"></div>
+      </div>
+      <div class="code-line highlight-fade" id="cr-7">
+        <div class="line-num">22</div>
+        <div class="line-gutter"></div>
+        <div class="line-content">&nbsp;&nbsp;&nbsp;&nbsp;<span class="var">fqname</span>, <span class="var">n</span>, &amp;<span class="ptr">ns_name</span>, &amp;<span class="ptr">ns_len</span>);</div>
+        <div class="line-annotation" id="ann-cr-7"></div>
+      </div>
+      <div class="code-line highlight-fade" id="cr-8">
+        <div class="line-num">23</div>
+        <div class="line-gutter"></div>
+        <div class="line-content">&nbsp;&nbsp;<span class="kw">if</span> (<span class="ptr">ns_name</span>) { <span class="cmt">// ⚡ UBI bug!</span></div>
+        <div class="line-annotation" id="ann-cr-8"></div>
+      </div>
+      <div class="code-line highlight-fade" id="cr-9">
+        <div class="line-num">24</div>
+        <div class="line-gutter"></div>
+        <div class="line-content">&nbsp;&nbsp;&nbsp;&nbsp;<span class="cmt">// ns_name used in branch — MUST be init</span></div>
+      </div>
+      <div class="code-line highlight-fade" id="cr-10">
+        <div class="line-num">25</div>
+        <div class="line-gutter"></div>
+        <div class="line-content">&nbsp;&nbsp;}</div>
+      </div>
+      <div class="code-line highlight-fade" id="cr-11">
+        <div class="line-num">26</div>
+        <div class="line-gutter"></div>
+        <div class="line-content">&nbsp;&nbsp;<span class="kw">return</span> <span class="num">0</span>;</div>
+      </div>
+      <div class="code-line highlight-fade" id="cr-12">
+        <div class="line-num">27</div>
+        <div class="line-gutter"></div>
+        <div class="line-content">}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: Analysis panel -->
+  <div class="analysis-panel">
+    <div class="panel-header">
+      <div class="panel-title" id="analysisTitle" style="color:var(--blue)">Analysis Walkthrough</div>
+    </div>
+
+    <div class="analysis-scroll">
+
+      <!-- STEP 0: Overview -->
+      <div class="step-card visible" id="step-0">
+        <div class="step-title">Inter-Procedural UBI Detection</div>
+        <div class="step-desc">
+          This walkthrough traces exactly how <span style="color:var(--teal);font-family:'JetBrains Mono',monospace">UBITect</span> discovers a real Use-Before-Initialization bug in the Linux AppArmor module — crossing two function boundaries using <strong>context-sensitive, flow-sensitive qualifier inference</strong>.
+        </div>
+
+        <!-- Call graph -->
+        <div class="summary-box">
+          <div class="summary-box-header" style="color: var(--blue)">📞 CALL GRAPH</div>
+          <div class="summary-box-body">
+            <div class="callgraph">
+              <div class="cg-fn" style="border-color:var(--orange);background:rgba(251,146,60,0.06)">
+                <div class="cg-fn-name" style="color:var(--orange)">aa_fqlookupn_profile</div>
+                <div class="cg-fn-role">CALLER · allocates ns_name, ns_len</div>
+              </div>
+              <div class="cg-arrow">
+                <div class="cg-arrow-line" style="background:var(--teal); color:var(--teal)"></div>
+                <div class="cg-arrow-label">passes &amp;ns_name, &amp;ns_len</div>
+              </div>
+              <div class="cg-fn" style="border-color:var(--teal);background:rgba(45,212,191,0.06)">
+                <div class="cg-fn-name" style="color:var(--teal)">aa_splitn_fqname</div>
+                <div class="cg-fn-role">CALLEE · may not init ns_name</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="summary-box">
+          <div class="summary-box-header" style="color: var(--yellow)">🔑 WHY INTER-PROCEDURAL?</div>
+          <div class="summary-box-body">
+            <div class="qualifier-row">
+              <span class="q-label q-muted">intra</span>
+              <span class="q-text">An intra-procedural analysis sees <code>ns_name</code> passed by pointer and must conservatively assume it's used. This would flag the call as safe (false negative) or generate excessive false positives.</span>
+            </div>
+            <div class="qualifier-row">
+              <span class="q-label q-teal">inter</span>
+              <span class="q-text">UBITect analyzes the callee, builds a <em>function summary</em>, and propagates qualifier constraints back to the caller — enabling precise context-sensitive detection.</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="summary-box">
+          <div class="summary-box-header" style="color: var(--purple)">⚙️ ANALYSIS PIPELINE</div>
+          <div class="summary-box-body">
+            <div class="qualifier-row"><span class="q-label q-teal">②</span><span class="q-text">Apply <strong>intra-procedural</strong> qualifier inference to callee (bottom-up)</span></div>
+            <div class="qualifier-row"><span class="q-label q-orange">③</span><span class="q-text">Generate <strong>function summary</strong>: QR (requirements), QU (updates), Return qualifier</span></div>
+            <div class="qualifier-row"><span class="q-label q-yellow">④</span><span class="q-text">Analyze <strong>caller</strong>, apply summary at call site</span></div>
+            <div class="qualifier-row"><span class="q-label q-purple">⑤</span><span class="q-text">Propagate qualifiers through caller's CFG, detect conflicts</span></div>
+            <div class="qualifier-row"><span class="q-label q-red">⑥</span><span class="q-text">Confirm UBI via <strong>symbolic execution</strong> (KLEE) — verify path feasibility</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 1: Intra-procedural callee -->
+      <div class="step-card" id="step-1">
+        <div class="step-title">② Intra-Procedural: Callee Analysis</div>
+        <div class="step-desc">
+          UBITect starts bottom-up: first analyzing <span style="color:var(--teal);font-family:'JetBrains Mono',monospace">aa_splitn_fqname</span>. It assigns symbolic qualifier variables <code style="color:var(--purple)">κ₁, κ₂…</code> to each argument and tracks how they flow through the CFG.
+        </div>
+
+        <!-- CFG -->
+        <div class="cfg-container">
+          <div class="cfg-title">Control Flow Graph — aa_splitn_fqname</div>
+          <div class="cfg-nodes">
+            <div class="cfg-node active-node">BB entry<br><span style="font-size:0.65rem;color:var(--muted)">ns_name → κ₂∗ · ns_len → κ₄∗</span></div>
+            <div class="cfg-connector">↓ if (!name)</div>
+            <div style="display:flex;gap:24px;align-items:flex-start">
+              <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+                <div class="cfg-node" style="border-color:var(--red);color:var(--red);min-width:140px">BB early-return<br><span style="font-size:0.65rem">return NULL<br>*ns_name: <strong>uninit</strong></span></div>
+              </div>
+              <div style="color:var(--muted);font-size:0.7rem;margin-top:20px">│ name≠NULL</div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+                <div class="cfg-node init-node" style="min-width:140px">BB normal<br><span style="font-size:0.65rem">*ns_name = NULL<br>*ns_len = 0 → <strong>init</strong></span></div>
+              </div>
+            </div>
+            <div class="cfg-connector">↓ merge (BB exit)</div>
+            <div class="cfg-node" style="border-color:var(--purple);color:var(--purple)">BB return<br><span style="font-size:0.65rem">*ns_name: <strong>κ₂ ∨ init</strong> (symbolic!)</span></div>
+          </div>
+        </div>
+
+        <div class="summary-box">
+          <div class="summary-box-header" style="color: var(--teal)">QUALIFIER INFERENCE — per variable</div>
+          <div class="summary-box-body">
+            <table class="type-table">
+              <thead><tr><th>Variable</th><th>Entry Type</th><th>Normal path</th><th>Early return</th><th>At merge</th></tr></thead>
+              <tbody>
+                <tr>
+                  <td style="color:var(--orange)">*ns_name</td>
+                  <td><span class="inset-tag q-purple">κ₂</span></td>
+                  <td><span class="inset-tag q-green">init</span></td>
+                  <td><span class="inset-tag q-red">uninit</span></td>
+                  <td><span class="inset-tag q-purple">κ₂ ∨ init</span></td>
+                </tr>
+                <tr>
+                  <td style="color:var(--orange)">*ns_len</td>
+                  <td><span class="inset-tag q-purple">κ₄</span></td>
+                  <td><span class="inset-tag q-green">init</span></td>
+                  <td><span class="inset-tag q-red">uninit</span></td>
+                  <td><span class="inset-tag q-purple">κ₄ ∨ init</span></td>
+                </tr>
+                <tr>
+                  <td style="color:var(--blue)">return val</td>
+                  <td>—</td>
+                  <td><span class="inset-tag q-green">name (init)</span></td>
+                  <td><span class="inset-tag q-muted">NULL</span></td>
+                  <td><span class="inset-tag q-green">init</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="summary-box">
+          <div class="summary-box-header" style="color: var(--yellow)">KEY INSIGHT: Least-Upper-Bound at merge</div>
+          <div class="summary-box-body">
+            <div class="qualifier-row">
+              <span class="q-label q-yellow">∨</span>
+              <span class="q-text">At the merge BB, UBITect computes: <code style="color:var(--purple)">κ₂ ∨ init</code>. Since <code>κ₂</code> is still symbolic (could be uninit), the result remains symbolic — enabling <strong>context-sensitivity</strong>: whether *ns_name is init at exit depends on what the caller passed in.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 2: Function summary -->
+      <div class="step-card" id="step-2">
+        <div class="step-title">③ Generate Function Summary</div>
+        <div class="step-desc">
+          After intra-procedural analysis, UBITect encodes the callee's behavior as a compact <strong>Function Summary (QR, QU, Return)</strong> — no need to re-analyze the callee at each call site.
+        </div>
+
+        <div class="summary-box">
+          <div class="summary-box-header" style="color: var(--teal)">📋 FUNCTION SUMMARY · aa_splitn_fqname</div>
+          <div class="summary-box-body">
+            <div class="qualifier-row">
+              <span class="q-label q-teal">QR</span>
+              <div>
+                <div style="font-size:0.8rem;font-weight:700;margin-bottom:3px">Qualifier Requirements</div>
+                <div class="q-text" style="font-size:0.78rem">Weakest qualifiers input args must satisfy for the callee to execute without triggering UBI. Here: <code style="color:var(--purple)">ns_name</code> pointer itself must be <span class="inset-tag q-green">init</span> (it's dereferenced). The <em>pointed-to</em> value <code>*ns_name</code> has no requirement — callee may or may not write it.</div>
+              </div>
+            </div>
+            <div class="divider"></div>
+            <div class="qualifier-row">
+              <span class="q-label q-orange">QU</span>
+              <div>
+                <div style="font-size:0.8rem;font-weight:700;margin-bottom:3px">Qualifier Updates</div>
+                <div class="q-text" style="font-size:0.78rem">Least-upper-bound of qualifiers across all alias-set paths at exit. For <code>*ns_name</code>: the update is <span class="inset-tag q-purple">κ₂ ∨ init</span>. This is kept <strong>symbolic</strong> so the caller can substitute its own κ₂ value. If caller's κ₂ = <span class="inset-tag q-red">uninit</span>, then <code>uninit ∨ init = uninit</code>.</div>
+              </div>
+            </div>
+            <div class="divider"></div>
+            <div class="qualifier-row">
+              <span class="q-label q-yellow">Ret</span>
+              <div>
+                <div style="font-size:0.8rem;font-weight:700;margin-bottom:3px">Return Qualifier</div>
+                <div class="q-text" style="font-size:0.78rem">Return value is <span class="inset-tag q-green">init</span> — the returned <code>name</code> pointer has been initialized by <code>skipn_spaces()</code>, so the caller can safely use it.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="summary-box">
+          <div class="summary-box-header" style="color: var(--blue)">🔬 WHY KEEP κ SYMBOLIC?</div>
+          <div class="summary-box-body">
+            <div class="qualifier-row">
+              <span class="q-label q-purple">κ₂</span>
+              <span class="q-text">Keeping the update symbolic enables <strong>context-sensitive</strong> analysis: the same function summary is reused at every call site. Each caller substitutes its own concrete qualifier for κ₂. This avoids expensive per-call-site re-analysis.</span>
+            </div>
+            <div class="qualifier-row">
+              <span class="q-label q-blue">eg.</span>
+              <span class="q-text">Caller A passes already-initialized <code>ns_name</code> → κ₂=init → update = init ∨ init = <span class="inset-tag q-green">init</span> (safe)<br>Caller B passes uninitialized → κ₂=uninit → update = uninit ∨ init = <span class="inset-tag q-red">uninit</span> → <strong>UBI!</strong></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 3: Caller analysis -->
+      <div class="step-card" id="step-3">
+        <div class="step-title">④ Analyze Caller</div>
+        <div class="step-desc">
+          Now UBITect analyzes <span style="color:var(--orange);font-family:'JetBrains Mono',monospace">aa_fqlookupn_profile</span>. It starts by assigning qualifiers to local variables declared at lines 19–20, then reaches the call site.
+        </div>
+
+        <div class="summary-box">
+          <div class="summary-box-header" style="color: var(--orange)">LOCAL VARIABLES AT DECLARATION</div>
+          <div class="summary-box-body">
+            <table class="type-table">
+              <thead><tr><th>Variable</th><th>Declaration</th><th>Initial qualifier</th><th>Pointer qualifier</th></tr></thead>
+              <tbody>
+                <tr>
+                  <td style="color:var(--orange)">ns_name</td>
+                  <td><code>const char *ns_name</code></td>
+                  <td><span class="inset-tag q-red">uninit</span></td>
+                  <td>stack ptr → <span class="inset-tag q-green">init</span></td>
+                </tr>
+                <tr>
+                  <td style="color:var(--orange)">ns_len</td>
+                  <td><code>size_t ns_len</code></td>
+                  <td><span class="inset-tag q-red">uninit</span></td>
+                  <td>stack ptr → <span class="inset-tag q-green">init</span></td>
+                </tr>
+                <tr>
+                  <td style="color:var(--blue)">name</td>
+                  <td><code>const char *name</code></td>
+                  <td><span class="inset-tag q-red">uninit</span></td>
+                  <td>—</td>
+                </tr>
+              </tbody>
+            </table>
+            <div class="qualifier-row" style="margin-top:8px">
+              <span class="q-label q-muted">note</span>
+              <span class="q-text" style="font-size:0.76rem">The <em>pointer itself</em> (<code>&amp;ns_name</code>) lives on the stack and is <span class="inset-tag q-green">init</span>. But the <em>value pointed-to</em> (<code>*ns_name</code>) is <span class="inset-tag q-red">uninit</span> — it has never been assigned.</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="summary-box">
+          <div class="summary-box-header" style="color: var(--blue)">AT THE CALL SITE (line 21–22)</div>
+          <div class="summary-box-body">
+            <div class="qualifier-row">
+              <span class="q-label q-blue">arg</span>
+              <span class="q-text">Caller passes <code>&amp;ns_name</code> — pointer is <span class="inset-tag q-green">init</span> ✓ (satisfies QR). The value <code>*ns_name</code> is <span class="inset-tag q-red">uninit</span>: κ₂ = <span class="inset-tag q-red">uninit</span> in this context.</span>
+            </div>
+            <div class="qualifier-row">
+              <span class="q-label q-orange">QU</span>
+              <span class="q-text">Apply QU from summary: update for <code>*ns_name</code> = <code>κ₂ ∨ init</code> = <code>uninit ∨ init</code> = <span class="inset-tag q-red">uninit</span>.</span>
+            </div>
+            <div class="qualifier-row">
+              <span class="q-label q-yellow">result</span>
+              <span class="q-text">After the call, <code>ns_name</code> still has qualifier <span class="inset-tag q-red">uninit</span>. The callee may not have written it (error path).</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 4: Propagate qualifiers -->
+      <div class="step-card" id="step-4">
+        <div class="step-title">⑤ Propagate Qualifiers</div>
+        <div class="step-desc">
+          Qualifier constraints propagate through the caller's CFG post-call. At line 23, <code style="color:var(--orange)">ns_name</code> flows into a conditional branch — UBITect enforces that any variable used in a branch condition must have qualifier <span class="inset-tag q-green">init</span>.
+        </div>
+
+        <div class="summary-box">
+          <div class="summary-box-header" style="color: var(--teal)">QUALIFIER PROPAGATION</div>
+          <div class="summary-box-body">
+            <div style="display:flex;flex-direction:column;gap:8px;font-family:'JetBrains Mono',monospace;font-size:0.75rem">
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="color:var(--muted)">line 19</span>
+                <span style="color:var(--orange)">ns_name</span>
+                <span style="color:var(--muted)">→</span>
+                <span class="inset-tag q-red">uninit</span>
+                <span style="color:var(--muted);font-size:0.68rem">(declared, never assigned)</span>
+              </div>
+              <div style="padding-left:20px;color:var(--muted)">↓ pass &amp;ns_name to callee (line 21)</div>
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="color:var(--muted)">post-call</span>
+                <span style="color:var(--orange)">ns_name</span>
+                <span style="color:var(--muted)">→</span>
+                <span class="inset-tag q-red">uninit</span>
+                <span style="color:var(--muted);font-size:0.68rem">(QU: uninit ∨ init = uninit)</span>
+              </div>
+              <div style="padding-left:20px;color:var(--muted)">↓ flows to branch condition (line 23)</div>
+              <div style="display:flex;align-items:center;gap:8px;background:rgba(248,113,113,0.1);padding:6px 10px;border-radius:6px;border:1px solid rgba(248,113,113,0.3)">
+                <span style="color:var(--muted)">line 23</span>
+                <span style="color:var(--orange)">ns_name</span>
+                <span style="color:var(--muted)">used in</span>
+                <span style="color:var(--blue)">if()</span>
+                <span style="color:var(--muted)">→ requires</span>
+                <span class="inset-tag q-green">init</span>
+                <span style="color:var(--red)">✗ got uninit</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="summary-box">
+          <div class="summary-box-header" style="color: var(--purple)">UBITECT ASSERTION</div>
+          <div class="summary-box-body">
+            <div class="qualifier-row">
+              <span class="q-label q-purple">rule</span>
+              <span class="q-text">UBITect enforces two security-critical assertions:<br>
+              1. Only <span class="inset-tag q-green">init</span> values can be <strong>dereferenced</strong><br>
+              2. Only <span class="inset-tag q-green">init</span> values can be used in <strong>conditional branches</strong></span>
+            </div>
+            <div class="qualifier-row">
+              <span class="q-label q-red">fail</span>
+              <span class="q-text"><code>if (ns_name)</code> at line 23 uses <code>ns_name</code> with qualifier <span class="inset-tag q-red">uninit</span>. This violates assertion ②. The inference engine raises a <strong>potential UBI warning</strong>.</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Guidance for SE -->
+        <div class="summary-box">
+          <div class="summary-box-header" style="color: var(--yellow)">⚡ GUIDANCE FOR SYMBOLIC EXECUTION</div>
+          <div class="summary-box-body">
+            <div class="qualifier-row">
+              <span class="q-label q-muted">avoid</span>
+              <span class="q-text">BB where <code>*ns_name</code> is initialized (normal path in callee, BB-normal)</span>
+            </div>
+            <div class="qualifier-row">
+              <span class="q-label q-yellow">must</span>
+              <span class="q-text">BB at line 23 of caller where the UBI occurs (BB %3)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 5: UBI detected -->
+      <div class="step-card" id="step-5">
+        <div class="step-title">⑥ UBI Bug Detected & Verified</div>
+        <div class="step-desc">
+          The qualifier conflict triggers a warning. UBITect then launches <strong>under-constrained symbolic execution</strong> (KLEE) to confirm a feasible execution path exists — eliminating false positives.
+        </div>
+
+        <div class="bug-alert">
+          <div class="bug-icon">⚡</div>
+          <div class="bug-text">
+            <strong>UBI BUG CONFIRMED — security/apparmor/policy.c:23</strong>
+            Variable <code>ns_name</code> (qualified <span class="inset-tag q-red">uninit</span>) is used in a conditional branch <code>if(ns_name)</code>. Feasible path: callee's early return (BB early-return → line 9) leaves <code>*ns_name</code> uninitialized → caller reads it at line 23.
+          </div>
+        </div>
+
+        <!-- Feasible path -->
+        <div class="summary-box">
+          <div class="summary-box-header" style="color: var(--red)">💀 FEASIBLE BUG PATH</div>
+          <div class="summary-box-body">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:0.74rem;display:flex;flex-direction:column;gap:5px">
+              <div style="display:flex;align-items:center;gap:8px"><span class="inset-tag q-muted">caller</span><span style="color:var(--orange)">aa_fqlookupn_profile</span> declares ns_name (uninit)</div>
+              <div style="padding-left:16px;color:var(--muted)">↓ calls aa_splitn_fqname(&amp;ns_name)</div>
+              <div style="display:flex;align-items:center;gap:8px;padding-left:16px"><span class="inset-tag q-muted">callee</span><span>name = skipn_spaces(...) returns NULL</span></div>
+              <div style="display:flex;align-items:center;gap:8px;padding-left:32px"><span class="inset-tag q-red">path</span><span style="color:var(--red)">early return → *ns_name never written!</span></div>
+              <div style="padding-left:16px;color:var(--muted)">↓ returns to caller</div>
+              <div style="display:flex;align-items:center;gap:8px;background:rgba(248,113,113,0.12);padding:6px 10px;border-radius:5px;border:1px solid rgba(248,113,113,0.3)">
+                <span class="inset-tag q-red">BUG</span>
+                <span style="color:var(--red)">if (ns_name) ← reads uninitialized stack value!</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- What-if: context sensitivity -->
+        <div class="summary-box">
+          <div class="summary-box-header" style="color: var(--teal)">🎯 CONTEXT-SENSITIVITY IN ACTION</div>
+          <div class="summary-box-body">
+            <div style="font-size:0.79rem;line-height:1.65;color:#94a3b8">
+              If a <em>different caller</em> pre-initializes <code>ns_name = someValue</code> before the call, then κ₂ = <span class="inset-tag q-green">init</span>, and QU produces <code>init ∨ init = init</code> — <strong>no warning</strong>. The same function summary produces different results per calling context without re-analyzing the callee. This is the power of context-sensitive inter-procedural analysis.
+            </div>
+          </div>
+        </div>
+
+        <!-- Fix -->
+        <div class="success-alert">
+          <div class="bug-icon" style="font-size:1.2rem">✅</div>
+          <div class="success-text">
+            <strong>Patch: Initialize ns_name at declaration</strong>
+            <code style="color:var(--green);font-family:'JetBrains Mono',monospace">const char *ns_name = NULL;</code> — sets κ₂=init at entry. QU then resolves to init. No more UBI warning. UBITect submitted this patch to Linux maintainers.
+          </div>
+        </div>
+
+        <!-- Summary table -->
+        <div class="summary-box">
+          <div class="summary-box-header" style="color: var(--blue)">📊 ANALYSIS SUMMARY</div>
+          <div class="summary-box-body">
+            <table class="type-table">
+              <thead><tr><th>Property</th><th>Value</th></tr></thead>
+              <tbody>
+                <tr><td>Analysis type</td><td style="color:var(--teal)">Flow-sensitive, Field-sensitive, Context-sensitive</td></tr>
+                <tr><td>Bug type</td><td style="color:var(--red)">Use-Before-Initialization (UBI)</td></tr>
+                <tr><td>Bug location</td><td style="color:var(--orange)">aa_fqlookupn_profile · line 23</td></tr>
+                <tr><td>Root cause</td><td>ns_name uninitialized if callee takes early-return path</td></tr>
+                <tr><td>Detection method</td><td>Qualifier conflict: uninit used where init required</td></tr>
+                <tr><td>Verification</td><td style="color:var(--green)">KLEE symbolic execution confirms feasible path</td></tr>
+                <tr><td>Fix</td><td style="color:var(--green)">Initialize ns_name = NULL at declaration</td></tr>
+                <tr><td>Security impact</td><td style="color:var(--red)">Info leakage / undefined behavior</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /analysis-scroll -->
+
+    <div class="nav-bar">
+      <button class="nav-btn secondary" id="prevBtn" onclick="prevStep()" disabled>← Prev</button>
+      <div class="step-indicator">Step <span id="stepNum">1</span> of <span>6</span></div>
+      <button class="nav-btn primary" id="nextBtn" onclick="nextStep()">Next →</button>
+    </div>
+  </div>
+</main>
+
+<script>
+let currentStep = 0;
+const totalSteps = 6;
+
+// Step configurations
+const steps = [
+  {
+    title: "Overview",
+    calleeLines: [],
+    callerLines: [],
+    calleeHighlight: {},
+    callerHighlight: {},
+  },
+  {
+    title: "Intra-Procedural: Callee",
+    calleeHighlight: {
+      'cl-3': 'highlight-init',       // params
+      'cl-4': 'highlight-init',       // name = skipn_spaces (gets init value)
+      'cl-5': 'highlight-return',     // if (!name)
+      'cl-6': 'highlight-uninit',     // early return — ns_name NOT init
+      'cl-7': 'highlight-init',       // *ns_name = NULL (init path)
+      'cl-8': 'highlight-init',       // *ns_len = 0 (init path)
+      'cl-10': 'highlight-return',    // return name
+    },
+    calleeAnnotations: {
+      'ann-cl-3': { text: 'κ₁∗·κ₂∗', cls: 'ann-symbolic' },
+      'ann-cl-6': { text: '*ns_name: uninit', cls: 'ann-uninit' },
+      'ann-cl-7': { text: '*ns_name → init', cls: 'ann-init' },
+      'ann-cl-8': { text: '*ns_len → init', cls: 'ann-init' },
+      'ann-cl-10': { text: 'return: init', cls: 'ann-init' },
+    },
+    callerHighlight: {},
+    callerAnnotations: {},
+  },
+  {
+    title: "Generate Function Summary",
+    calleeHighlight: {
+      'cl-3': 'highlight-init',
+      'cl-6': 'highlight-uninit',
+      'cl-7': 'highlight-init',
+      'cl-8': 'highlight-init',
+    },
+    calleeAnnotations: {
+      'ann-cl-3': { text: 'QR: ptr must be init', cls: 'ann-init' },
+      'ann-cl-6': { text: '*ns_name: keeps κ₂', cls: 'ann-uninit' },
+      'ann-cl-7': { text: '*ns_name → init', cls: 'ann-init' },
+      'ann-cl-8': { text: '*ns_len → init', cls: 'ann-init' },
+    },
+    callerHighlight: {},
+    callerAnnotations: {},
+  },
+  {
+    title: "Analyze Caller",
+    calleeHighlight: {},
+    calleeAnnotations: {},
+    callerHighlight: {
+      'cr-4': 'highlight-uninit',   // ns_name declared uninit
+      'cr-5': 'highlight-uninit',   // ns_len declared uninit
+      'cr-6': 'highlight-call',     // call site
+      'cr-7': 'highlight-call',
+    },
+    callerAnnotations: {
+      'ann-cr-4': { text: 'ns_name: uninit', cls: 'ann-uninit' },
+      'ann-cr-5': { text: 'ns_len: uninit', cls: 'ann-uninit' },
+      'ann-cr-6': { text: 'call site', cls: 'ann-call' },
+      'ann-cr-7': { text: '&ns_name ptr: init ✓', cls: 'ann-init' },
+    },
+  },
+  {
+    title: "Propagate Qualifiers",
+    calleeHighlight: {},
+    calleeAnnotations: {},
+    callerHighlight: {
+      'cr-4': 'highlight-uninit',
+      'cr-6': 'highlight-call',
+      'cr-7': 'highlight-call',
+      'cr-8': 'highlight-uninit',   // if (ns_name) — conflict!
+    },
+    callerAnnotations: {
+      'ann-cr-4': { text: 'uninit', cls: 'ann-uninit' },
+      'ann-cr-6': { text: 'QU applied', cls: 'ann-symbolic' },
+      'ann-cr-7': { text: 'κ₂=uninit → QU=uninit', cls: 'ann-uninit' },
+      'ann-cr-8': { text: 'needs init! got uninit', cls: 'ann-bug' },
+    },
+  },
+  {
+    title: "UBI Detected!",
+    calleeHighlight: {
+      'cl-5': 'highlight-uninit',
+      'cl-6': 'highlight-uninit',
+    },
+    calleeAnnotations: {
+      'ann-cl-6': { text: 'early-return path', cls: 'ann-uninit' },
+    },
+    callerHighlight: {
+      'cr-4': 'highlight-uninit',
+      'cr-6': 'highlight-call',
+      'cr-7': 'highlight-call',
+      'cr-8': 'highlight-bug',
+    },
+    callerAnnotations: {
+      'ann-cr-4': { text: '← uninit root', cls: 'ann-uninit' },
+      'ann-cr-6': { text: 'call site', cls: 'ann-call' },
+      'ann-cr-8': { text: '⚡ UBI BUG!', cls: 'ann-bug' },
+    },
+  },
+];
+
+const gutterColors = {
+  'highlight-init': 'var(--green)',
+  'highlight-uninit': 'var(--red)',
+  'highlight-bug': 'var(--red)',
+  'highlight-call': 'var(--blue)',
+  'highlight-return': 'var(--yellow)',
+};
+
+function clearHighlights() {
+  document.querySelectorAll('.code-line').forEach(el => {
+    el.classList.remove('highlight-init','highlight-uninit','highlight-bug','highlight-call','highlight-return','dim');
+    const gutter = el.querySelector('.line-gutter');
+    if (gutter) gutter.style.background = 'transparent';
+  });
+  document.querySelectorAll('.line-annotation').forEach(el => {
+    el.classList.remove('show');
+    el.className = 'line-annotation';
+  });
+}
+
+function applyStep(idx) {
+  clearHighlights();
+  const step = steps[idx];
+
+  // Apply callee highlights
+  Object.entries(step.calleeHighlight || {}).forEach(([id, cls]) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.classList.add(cls);
+      const gutter = el.querySelector('.line-gutter');
+      if (gutter && gutterColors[cls]) gutter.style.background = gutterColors[cls];
+    }
+  });
+
+  // Apply callee annotations
+  Object.entries(step.calleeAnnotations || {}).forEach(([id, ann]) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.textContent = ann.text;
+      el.className = 'line-annotation show ' + ann.cls;
+    }
+  });
+
+  // Apply caller highlights
+  Object.entries(step.callerHighlight || {}).forEach(([id, cls]) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.classList.add(cls);
+      const gutter = el.querySelector('.line-gutter');
+      if (gutter && gutterColors[cls]) gutter.style.background = gutterColors[cls];
+    }
+  });
+
+  // Apply caller annotations
+  Object.entries(step.callerAnnotations || {}).forEach(([id, ann]) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.textContent = ann.text;
+      el.className = 'line-annotation show ' + ann.cls;
+    }
+  });
+
+  // Show step card
+  document.querySelectorAll('.step-card').forEach((el, i) => {
+    el.classList.toggle('visible', i === idx);
+  });
+
+  // Update pipeline
+  document.querySelectorAll('.pipe-step').forEach(el => {
+    const s = parseInt(el.dataset.step);
+    el.classList.toggle('active', s === idx);
+  });
+
+  // Update nav
+  document.getElementById('stepNum').textContent = idx + 1;
+  document.getElementById('prevBtn').disabled = idx === 0;
+  document.getElementById('nextBtn').disabled = false;
+  document.getElementById('nextBtn').textContent = idx === totalSteps - 2 ? 'Reveal Bug →' : idx === totalSteps - 1 ? 'Restart' : 'Next →';
+
+  // Update title
+  document.getElementById('analysisTitle').textContent = steps[idx].title || 'Analysis';
+}
+
+function nextStep() {
+  if (currentStep === totalSteps - 1) {
+    currentStep = 0;
+    applyStep(currentStep);
+  } else {
+    currentStep++;
+    applyStep(currentStep);
+  }
+}
+
+function prevStep() {
+  if (currentStep > 0) {
+    currentStep--;
+    applyStep(currentStep);
+  }
+}
+
+function goToStep(idx) {
+  currentStep = idx;
+  applyStep(currentStep);
+}
+
+// Keyboard navigation
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight' || e.key === 'ArrowDown') nextStep();
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') prevStep();
+});
+
+// Init
+applyStep(0);
+</script>
+</body>
+</html>
