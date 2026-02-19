@@ -1,0 +1,1491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UBITect — Guided Symbolic Execution Walkthrough</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Syne:wght@400;600;700;800&display=swap');
+
+  :root {
+    --bg: #0d1117;
+    --bg2: #161b22;
+    --bg3: #1f2733;
+    --teal: #2dd4bf;
+    --orange: #fb923c;
+    --yellow: #facc15;
+    --blue: #60a5fa;
+    --red: #f87171;
+    --green: #4ade80;
+    --purple: #c084fc;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --border: #2d3748;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Syne', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    overflow-x: hidden;
+  }
+
+  /* ── Header ── */
+  header {
+    background: linear-gradient(135deg, #0d1117 0%, #1a1f2e 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 28px 48px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+  header h1 {
+    font-size: 1.6rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    background: linear-gradient(90deg, var(--orange), var(--yellow));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  header .subtitle {
+    font-size: 0.78rem;
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+    margin-top: 4px;
+  }
+  .badge {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.72rem;
+    color: var(--orange);
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.08em;
+  }
+
+  /* ── Pipeline bar ── */
+  .pipeline {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    padding: 20px 48px;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto;
+    flex-shrink: 0;
+  }
+  .pipe-step {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 20px;
+    border: 1.5px solid var(--border);
+    border-radius: 6px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    white-space: nowrap;
+    color: var(--muted);
+    background: var(--bg);
+  }
+  .pipe-step:hover { border-color: var(--orange); color: var(--orange); }
+  .pipe-step.active { border-color: var(--orange); color: var(--orange); background: rgba(251,146,60,0.08); }
+  .pipe-step .step-num {
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: var(--bg3);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.65rem;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .pipe-step.active .step-num { background: var(--orange); color: #0d1117; }
+  .pipe-arrow {
+    color: var(--border);
+    font-size: 1.1rem;
+    margin: 0 8px;
+    flex-shrink: 0;
+  }
+
+  /* ── Main layout ── */
+  body {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+  }
+  main {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    flex: 1;
+    min-height: 0;
+  }
+
+  /* ── Code panels ── */
+  .code-panel {
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-height: 0;
+  }
+  .panel-header {
+    padding: 14px 20px;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+  .panel-title {
+    font-size: 0.82rem;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .fn-badge {
+    font-size: 0.68rem;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 500;
+  }
+  .callee-badge { background: rgba(45,212,191,0.15); color: var(--teal); border: 1px solid rgba(45,212,191,0.3); }
+  .caller-badge { background: rgba(251,146,60,0.15); color: var(--orange); border: 1px solid rgba(251,146,60,0.3); }
+
+  .code-scroll { overflow-y: auto; flex: 1; padding: 16px 0; }
+
+  .code-line {
+    display: flex;
+    align-items: flex-start;
+    gap: 0;
+    padding: 2px 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    line-height: 1.7;
+    position: relative;
+    transition: background 0.3s ease;
+  }
+  .code-line:hover { background: rgba(255,255,255,0.02); }
+  .code-line.highlight-init { background: rgba(74,222,128,0.08) !important; }
+  .code-line.highlight-uninit { background: rgba(248,113,113,0.1) !important; }
+  .code-line.highlight-bug { background: rgba(248,113,113,0.18) !important; animation: pulse-red 1.2s ease infinite; }
+  .code-line.highlight-call { background: rgba(96,165,250,0.1) !important; }
+  .code-line.highlight-return { background: rgba(250,204,21,0.08) !important; }
+  .code-line.highlight-avoid { background: rgba(248,113,113,0.06) !important; }
+  .code-line.highlight-symbolic { background: rgba(192,132,252,0.1) !important; }
+  .code-line.highlight-path { background: rgba(251,146,60,0.1) !important; }
+  .code-line.dim { opacity: 0.3; }
+
+  @keyframes pulse-red {
+    0%,100% { background: rgba(248,113,113,0.18); }
+    50% { background: rgba(248,113,113,0.30); }
+  }
+  @keyframes pulse-green {
+    0%,100% { background: rgba(74,222,128,0.10); }
+    50% { background: rgba(74,222,128,0.22); }
+  }
+
+  .line-num {
+    width: 36px;
+    text-align: right;
+    color: var(--muted);
+    font-size: 0.72rem;
+    padding: 0 12px 0 0;
+    user-select: none;
+    flex-shrink: 0;
+  }
+  .line-gutter {
+    width: 4px;
+    height: 100%;
+    flex-shrink: 0;
+    margin-right: 12px;
+    border-radius: 2px;
+    align-self: stretch;
+    min-height: 22px;
+  }
+  .line-content { flex: 1; padding-right: 12px; }
+  .line-annotation {
+    display: none;
+    font-size: 0.68rem;
+    padding: 2px 10px;
+    border-radius: 4px;
+    margin-left: 8px;
+    align-self: center;
+    flex-shrink: 0;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .line-annotation.show { display: inline-flex; }
+  .ann-uninit { background: rgba(248,113,113,0.2); color: var(--red); border: 1px solid rgba(248,113,113,0.3); }
+  .ann-init { background: rgba(74,222,128,0.2); color: var(--green); border: 1px solid rgba(74,222,128,0.3); }
+  .ann-symbolic { background: rgba(192,132,252,0.2); color: var(--purple); border: 1px solid rgba(192,132,252,0.3); }
+  .ann-bug { background: rgba(248,113,113,0.3); color: #fca5a5; border: 1px solid var(--red); }
+  .ann-call { background: rgba(96,165,250,0.2); color: var(--blue); border: 1px solid rgba(96,165,250,0.3); }
+  .ann-avoid { background: rgba(248,113,113,0.15); color: var(--red); border: 1px solid rgba(248,113,113,0.25); }
+  .ann-path { background: rgba(251,146,60,0.2); color: var(--orange); border: 1px solid rgba(251,146,60,0.3); }
+  .ann-constraint { background: rgba(250,204,21,0.2); color: var(--yellow); border: 1px solid rgba(250,204,21,0.3); }
+
+  /* syntax highlighting */
+  .kw { color: #c792ea; }
+  .ty { color: #82aaff; }
+  .fn-name { color: #82aaff; }
+  .str { color: #c3e88d; }
+  .cmt { color: #546e7a; font-style: italic; }
+  .num { color: #f78c6c; }
+  .op { color: #89ddff; }
+  .var { color: #eeffff; }
+  .ptr { color: var(--orange); }
+  .macro { color: var(--yellow); }
+
+  /* ── Right panel — Analysis ── */
+  .analysis-panel {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--bg);
+    min-height: 0;
+  }
+  .analysis-scroll { overflow-y: auto; flex: 1; padding: 20px; }
+
+  /* ── Step explanation card ── */
+  .step-card {
+    display: none;
+    flex-direction: column;
+    gap: 16px;
+    animation: fadeIn 0.4s ease;
+  }
+  .step-card.visible { display: flex; }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .step-title {
+    font-size: 1.15rem;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+  }
+  .step-desc {
+    font-size: 0.84rem;
+    color: #94a3b8;
+    line-height: 1.7;
+  }
+
+  /* summary box */
+  .summary-box {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .summary-box-header {
+    padding: 10px 16px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.06em;
+    border-bottom: 1px solid var(--border);
+  }
+  .summary-box-body { padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+
+  .qualifier-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 0.8rem;
+    line-height: 1.55;
+  }
+  .q-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 0.75rem;
+    padding: 2px 8px;
+    border-radius: 4px;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .q-teal { background: rgba(45,212,191,0.15); color: var(--teal); border: 1px solid rgba(45,212,191,0.3); }
+  .q-orange { background: rgba(251,146,60,0.15); color: var(--orange); border: 1px solid rgba(251,146,60,0.3); }
+  .q-yellow { background: rgba(250,204,21,0.15); color: var(--yellow); border: 1px solid rgba(250,204,21,0.3); }
+  .q-blue { background: rgba(96,165,250,0.15); color: var(--blue); border: 1px solid rgba(96,165,250,0.3); }
+  .q-red { background: rgba(248,113,113,0.15); color: var(--red); border: 1px solid rgba(248,113,113,0.3); }
+  .q-green { background: rgba(74,222,128,0.15); color: var(--green); border: 1px solid rgba(74,222,128,0.3); }
+  .q-purple { background: rgba(192,132,252,0.15); color: var(--purple); border: 1px solid rgba(192,132,252,0.3); }
+  .q-muted { background: var(--bg3); color: var(--muted); border: 1px solid var(--border); }
+  .q-text { color: #94a3b8; }
+
+  /* type inference display */
+  .type-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.73rem;
+  }
+  .type-table th {
+    text-align: left;
+    padding: 7px 10px;
+    background: var(--bg3);
+    color: var(--muted);
+    font-size: 0.68rem;
+    letter-spacing: 0.08em;
+    border-bottom: 1px solid var(--border);
+  }
+  .type-table td {
+    padding: 6px 10px;
+    border-bottom: 1px solid rgba(45,55,72,0.5);
+    vertical-align: top;
+  }
+  .type-table tr:last-child td { border-bottom: none; }
+  .type-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+  /* flow arrows between panels */
+  .flow-connector {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.76rem;
+    color: #94a3b8;
+  }
+  .flow-arrow-icon { color: var(--teal); font-size: 1.1rem; }
+
+  /* bug alert */
+  .bug-alert {
+    background: rgba(248,113,113,0.08);
+    border: 1.5px solid rgba(248,113,113,0.4);
+    border-radius: 10px;
+    padding: 14px 16px;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  .bug-icon { font-size: 1.4rem; flex-shrink: 0; }
+  .bug-text { font-size: 0.8rem; line-height: 1.6; }
+  .bug-text strong { color: var(--red); display: block; font-size: 0.88rem; margin-bottom: 4px; }
+
+  .success-alert {
+    background: rgba(74,222,128,0.08);
+    border: 1.5px solid rgba(74,222,128,0.4);
+    border-radius: 10px;
+    padding: 14px 16px;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  .success-text { font-size: 0.8rem; line-height: 1.6; }
+  .success-text strong { color: var(--green); display: block; font-size: 0.88rem; margin-bottom: 4px; }
+
+  .warn-alert {
+    background: rgba(250,204,21,0.06);
+    border: 1.5px solid rgba(250,204,21,0.3);
+    border-radius: 10px;
+    padding: 14px 16px;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  .warn-text { font-size: 0.8rem; line-height: 1.6; }
+  .warn-text strong { color: var(--yellow); display: block; font-size: 0.88rem; margin-bottom: 4px; }
+
+  /* nav buttons */
+  .nav-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px;
+    border-top: 1px solid var(--border);
+    background: var(--bg2);
+    flex-shrink: 0;
+  }
+  .nav-btn {
+    padding: 9px 22px;
+    border-radius: 6px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 0.8rem;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .nav-btn.primary { background: var(--orange); color: #0d1117; }
+  .nav-btn.primary:hover { background: #fdba74; transform: translateY(-1px); }
+  .nav-btn.secondary { background: var(--bg3); color: var(--text); border: 1px solid var(--border); }
+  .nav-btn.secondary:hover { border-color: var(--orange); color: var(--orange); }
+  .nav-btn:disabled { opacity: 0.3; cursor: not-allowed; transform: none !important; }
+
+  .step-indicator {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+  .step-indicator span { color: var(--orange); font-weight: 700; }
+
+  /* legend */
+  .legend {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 10px 20px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg2);
+    flex-shrink: 0;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.68rem;
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .legend-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+  }
+
+  /* highlight transitions */
+  .highlight-fade {
+    transition: background 0.4s ease, opacity 0.4s ease;
+  }
+
+  /* cfg */
+  .cfg-container {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+  }
+  .cfg-title {
+    font-size: 0.72rem;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--muted);
+    letter-spacing: 0.06em;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+  }
+  .cfg-nodes {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    align-items: center;
+  }
+  .cfg-node {
+    padding: 8px 16px;
+    border-radius: 6px;
+    border: 1.5px solid var(--border);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.74rem;
+    text-align: center;
+    min-width: 200px;
+    transition: all 0.3s ease;
+    cursor: default;
+  }
+  .cfg-node.active-node {
+    border-color: var(--teal);
+    background: rgba(45,212,191,0.08);
+    color: var(--teal);
+  }
+  .cfg-node.bug-node {
+    border-color: var(--red);
+    background: rgba(248,113,113,0.08);
+    color: var(--red);
+    animation: pulse-red 1.2s ease infinite;
+  }
+  .cfg-node.init-node {
+    border-color: var(--green);
+    background: rgba(74,222,128,0.06);
+    color: var(--green);
+  }
+  .cfg-node.avoid-node {
+    border-color: var(--red);
+    background: rgba(248,113,113,0.06);
+    color: var(--red);
+    opacity: 0.6;
+  }
+  .cfg-node.path-node {
+    border-color: var(--orange);
+    background: rgba(251,146,60,0.08);
+    color: var(--orange);
+  }
+  .cfg-node.use-node {
+    border-color: var(--yellow);
+    background: rgba(250,204,21,0.08);
+    color: var(--yellow);
+  }
+  .cfg-connector {
+    color: var(--muted);
+    font-size: 0.75rem;
+    font-family: 'JetBrains Mono', monospace;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .cfg-connector::before, .cfg-connector::after {
+    content: '';
+    width: 1px;
+    height: 16px;
+    background: var(--border);
+  }
+
+  .inset-tag {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.68rem;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-weight: 600;
+  }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+  /* divider */
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 4px 0;
+  }
+
+  /* json block */
+  .json-block {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem;
+    line-height: 1.65;
+    overflow-x: auto;
+  }
+  .json-key { color: var(--blue); }
+  .json-str { color: var(--green); }
+  .json-bracket { color: var(--muted); }
+  .json-highlight { background: rgba(251,146,60,0.12); border-radius: 3px; padding: 0 2px; }
+
+  /* constraint display */
+  .constraint-chain {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+  }
+  .constraint-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* two-stage diagram */
+  .stage-box {
+    padding: 12px 18px;
+    border-radius: 8px;
+    border: 1.5px solid var(--border);
+    text-align: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    min-width: 140px;
+  }
+  .stage-arrow {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 0 12px;
+  }
+  .stage-arrow-line {
+    width: 60px;
+    height: 2px;
+    position: relative;
+  }
+  .stage-arrow-line::after {
+    content: '►';
+    position: absolute;
+    right: -6px;
+    top: -9px;
+    font-size: 0.9rem;
+  }
+  .stage-arrow-label { font-size: 0.62rem; color: var(--muted); font-family: 'JetBrains Mono', monospace; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>UBITect — Guided Symbolic Execution</h1>
+    <div class="subtitle">ESEC/FSE '20 · Zhai et al. · Stage 2: Under-Constrained SE with KLEE</div>
+  </div>
+  <div class="badge">backlog.c · KLEE + Z3 · Path Verification</div>
+</header>
+
+<!-- Pipeline bar -->
+<div class="pipeline" id="pipeline">
+  <div class="pipe-step active" data-step="0" onclick="goToStep(0)">
+    <span class="step-num">①</span> Overview
+  </div>
+  <div class="pipe-arrow">─</div>
+  <div class="pipe-step" data-step="1" onclick="goToStep(1)">
+    <span class="step-num">②</span> Warning from Stage 1
+  </div>
+  <div class="pipe-arrow">─</div>
+  <div class="pipe-step" data-step="2" onclick="goToStep(2)">
+    <span class="step-num">③</span> Build Guidance
+  </div>
+  <div class="pipe-arrow">─</div>
+  <div class="pipe-step" data-step="3" onclick="goToStep(3)">
+    <span class="step-num">④</span> KLEE Explores Paths
+  </div>
+  <div class="pipe-arrow">─</div>
+  <div class="pipe-step" data-step="4" onclick="goToStep(4)">
+    <span class="step-num">⑤</span> Solve Constraints
+  </div>
+  <div class="pipe-arrow">─</div>
+  <div class="pipe-step" data-step="5" onclick="goToStep(5)">
+    <span class="step-num">⑥</span> Bug Confirmed!
+  </div>
+</div>
+
+<!-- Legend -->
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot" style="background:rgba(192,132,252,0.5)"></div>symbolic input</div>
+  <div class="legend-item"><div class="legend-dot" style="background:rgba(248,113,113,0.5)"></div>blacklisted BB</div>
+  <div class="legend-item"><div class="legend-dot" style="background:rgba(250,204,21,0.5)"></div>use site (target)</div>
+  <div class="legend-item"><div class="legend-dot" style="background:rgba(251,146,60,0.5)"></div>explored path</div>
+  <div class="legend-item"><div class="legend-dot" style="background:rgba(74,222,128,0.5)"></div>concrete value</div>
+  <div class="legend-item"><div class="legend-dot" style="background:rgba(248,113,113,0.7)"></div>UBI bug</div>
+</div>
+
+<main>
+  <!-- LEFT: Code panel -->
+  <div class="code-panel">
+    <div class="panel-header">
+      <div class="panel-title" style="color:var(--orange)">test()</div>
+      <span class="fn-badge caller-badge">backlog.c · UBITect example</span>
+    </div>
+    <div class="code-scroll" id="codePanel">
+
+      <!-- Struct definitions (dimmed context) -->
+      <div class="code-line highlight-fade" id="ln-1">
+        <div class="line-num">1</div>
+        <div class="line-gutter"></div>
+        <div class="line-content"><span class="kw">enum</span> <span class="ty">engine_status</span> {</div>
+      </div>
+      <div class="code-line highlight-fade" id="ln-2">
+        <div class="line-num">2</div>
+        <div class="line-gutter"></div>
+        <div class="line-content">&nbsp;&nbsp;<span class="macro">ENGINE_IDLE</span>, <span class="macro">ENGINE_BUSY</span>, <span class="macro">ENGINE_W_DEQUEUE</span></div>
+      </div>
+      <div class="code-line highlight-fade" id="ln-3">
+        <div class="line-num">3</div>
+        <div class="line-gutter"></div>
+        <div class="line-content">};</div>
+      </div>
+      <div class="code-line highlight-fade" id="ln-4">
+        <div class="line-num">4</div>
+        <div class="line-gutter"></div>
+        <div class="line-content"><span class="kw">struct</span> <span class="ty">test_struct</span> { <span class="kw">int</span> <span class="var">irq</span>; <span class="kw">enum</span> <span class="ty">engine_status</span> <span class="var">eng_st</span>; };</div>
+      </div>
+      <div class="code-line highlight-fade" id="ln-5">
+        <div class="line-num">5</div>
+        <div class="line-gutter"></div>
+        <div class="line-content"><span class="kw">struct</span> <span class="ty">aStruct</span> { <span class="kw">enum</span> <span class="ty">engine_status</span> <span class="var">eng_st</span>; };</div>
+      </div>
+      <div class="code-line highlight-fade" id="ln-6">
+        <div class="line-num">6</div>
+        <div class="line-gutter"></div>
+        <div class="line-content"><span class="kw">struct</span> <span class="ty">test_struct</span> *<span class="var">init</span>;</div>
+      </div>
+      <div class="code-line highlight-fade" id="ln-7">
+        <div class="line-num">7</div>
+        <div class="line-gutter"></div>
+        <div class="line-content"><span class="kw">struct</span> <span class="ty">aStruct</span> *<span class="var">cpg</span>;</div>
+      </div>
+
+      <div class="divider" style="margin: 8px 0;"></div>
+
+      <!-- Function body -->
+      <div class="code-line highlight-fade" id="ln-8">
+        <div class="line-num">8</div>
+        <div class="line-gutter"></div>
+        <div class="line-content"><span class="kw">int</span> <span class="fn-name">test</span>(<span class="kw">int</span> <span class="var">a</span>) {</div>
+        <div class="line-annotation" id="ann-8"></div>
+      </div>
+      <div class="code-line highlight-fade" id="ln-9">
+        <div class="line-num">9</div>
+        <div class="line-gutter"></div>
+        <div class="line-content">&nbsp;&nbsp;<span class="kw">struct</span> <span class="ty">test_struct</span> *<span class="ptr">backlog</span>;</div>
+        <div class="line-annotation" id="ann-9"></div>
+      </div>
+      <div class="code-line highlight-fade" id="ln-10">
+        <div class="line-num">10</div>
+        <div class="line-gutter"></div>
+        <div class="line-content">&nbsp;&nbsp;<span class="var">cpg</span><span class="op">-></span><span class="var">eng_st</span> = <span class="macro">ENGINE_BUSY</span>;</div>
+        <div class="line-annotation" id="ann-10"></div>
+      </div>
+      <div class="code-line highlight-fade" id="ln-11">
+        <div class="line-num">11</div>
+        <div class="line-gutter"></div>
+        <div class="line-content">&nbsp;</div>
+      </div>
+      <div class="code-line highlight-fade" id="ln-12">
+        <div class="line-num">12</div>
+        <div class="line-gutter"></div>
+        <div class="line-content">&nbsp;&nbsp;<span class="kw">if</span> (<span class="var">a</span>) {</div>
+        <div class="line-annotation" id="ann-12"></div>
+      </div>
+      <div class="code-line highlight-fade" id="ln-13">
+        <div class="line-num">13</div>
+        <div class="line-gutter"></div>
+        <div class="line-content">&nbsp;&nbsp;&nbsp;&nbsp;<span class="ptr">backlog</span> = <span class="var">init</span>; <span class="cmt">// initializes backlog</span></div>
+        <div class="line-annotation" id="ann-13"></div>
+      </div>
+      <div class="code-line highlight-fade" id="ln-14">
+        <div class="line-num">14</div>
+        <div class="line-gutter"></div>
+        <div class="line-content">&nbsp;&nbsp;}</div>
+      </div>
+      <div class="code-line highlight-fade" id="ln-15">
+        <div class="line-num">15</div>
+        <div class="line-gutter"></div>
+        <div class="line-content">&nbsp;</div>
+      </div>
+      <div class="code-line highlight-fade" id="ln-16">
+        <div class="line-num">16</div>
+        <div class="line-gutter"></div>
+        <div class="line-content">&nbsp;&nbsp;<span class="kw">if</span> (<span class="ptr">backlog</span>) { <span class="cmt">// UBI bug!</span></div>
+        <div class="line-annotation" id="ann-16"></div>
+      </div>
+      <div class="code-line highlight-fade" id="ln-17">
+        <div class="line-num">17</div>
+        <div class="line-gutter"></div>
+        <div class="line-content">&nbsp;&nbsp;&nbsp;&nbsp;<span class="ptr">backlog</span><span class="op">-></span><span class="var">irq</span> = <span class="num">0</span>; <span class="cmt">// UBI bug!</span></div>
+        <div class="line-annotation" id="ann-17"></div>
+      </div>
+      <div class="code-line highlight-fade" id="ln-18">
+        <div class="line-num">18</div>
+        <div class="line-gutter"></div>
+        <div class="line-content">&nbsp;&nbsp;&nbsp;&nbsp;<span class="var">cpg</span><span class="op">-></span><span class="var">eng_st</span> = <span class="macro">ENGINE_IDLE</span>;</div>
+        <div class="line-annotation" id="ann-18"></div>
+      </div>
+      <div class="code-line highlight-fade" id="ln-19">
+        <div class="line-num">19</div>
+        <div class="line-gutter"></div>
+        <div class="line-content">&nbsp;&nbsp;}</div>
+      </div>
+      <div class="code-line highlight-fade" id="ln-20">
+        <div class="line-num">20</div>
+        <div class="line-gutter"></div>
+        <div class="line-content">&nbsp;&nbsp;<span class="kw">return</span> <span class="num">0</span>;</div>
+        <div class="line-annotation" id="ann-20"></div>
+      </div>
+      <div class="code-line highlight-fade" id="ln-21">
+        <div class="line-num">21</div>
+        <div class="line-gutter"></div>
+        <div class="line-content">}</div>
+      </div>
+
+      <div class="divider" style="margin: 16px 0;"></div>
+
+      <!-- LLVM BB mapping -->
+      <div class="panel-header" style="margin: 0 -1px; background: var(--bg2);">
+        <div class="panel-title" style="color:var(--purple)">LLVM Basic Blocks</div>
+        <span class="fn-badge" style="background:rgba(192,132,252,0.15);color:var(--purple);border:1px solid rgba(192,132,252,0.3)">BB mapping · backlog.llbc</span>
+      </div>
+
+      <div style="height:8px"></div>
+
+      <div class="code-line highlight-fade" id="bb-0">
+        <div class="line-num" style="color:var(--purple)">BB0</div>
+        <div class="line-gutter"></div>
+        <div class="line-content"><span class="cmt">// test-0: entry</span> &nbsp; <span class="var">backlog</span> = <span class="kw">alloca</span>, <span class="var">cpg</span><span class="op">-></span><span class="var">eng_st</span> = BUSY</div>
+        <div class="line-annotation" id="ann-bb-0"></div>
+      </div>
+      <div class="code-line highlight-fade" id="bb-1">
+        <div class="line-num" style="color:var(--purple)">BB1</div>
+        <div class="line-gutter"></div>
+        <div class="line-content"><span class="cmt">// test-1: if.then</span> &nbsp; <span class="ptr">backlog</span> = <span class="var">init</span> <span class="cmt">← initializes!</span></div>
+        <div class="line-annotation" id="ann-bb-1"></div>
+      </div>
+      <div class="code-line highlight-fade" id="bb-2">
+        <div class="line-num" style="color:var(--purple)">BB2</div>
+        <div class="line-gutter"></div>
+        <div class="line-content"><span class="cmt">// test-2: if.end</span> &nbsp;&nbsp; <span class="kw">if</span>(<span class="ptr">backlog</span>) <span class="cmt">← USE site</span></div>
+        <div class="line-annotation" id="ann-bb-2"></div>
+      </div>
+      <div class="code-line highlight-fade" id="bb-3">
+        <div class="line-num" style="color:var(--purple)">BB3</div>
+        <div class="line-gutter"></div>
+        <div class="line-content"><span class="cmt">// test-3: if.then.2</span> <span class="ptr">backlog</span><span class="op">-></span><span class="var">irq</span> = <span class="num">0</span></div>
+        <div class="line-annotation" id="ann-bb-3"></div>
+      </div>
+      <div class="code-line highlight-fade" id="bb-4">
+        <div class="line-num" style="color:var(--purple)">BB4</div>
+        <div class="line-gutter"></div>
+        <div class="line-content"><span class="cmt">// test-4: if.end.2</span> <span class="kw">return</span> <span class="num">0</span></div>
+        <div class="line-annotation" id="ann-bb-4"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: Analysis panel -->
+  <div class="analysis-panel">
+    <div class="panel-header">
+      <div class="panel-title" id="analysisTitle" style="color:var(--blue)">Analysis Walkthrough</div>
+    </div>
+
+    <div class="analysis-scroll">
+
+      <!-- STEP 0: Overview -->
+      <div class="step-card visible" id="step-0">
+        <div class="step-title">Guided Symbolic Execution</div>
+        <div class="step-desc">
+          This walkthrough shows <strong>Stage 2</strong> of UBITect: how <span style="color:var(--orange);font-family:'JetBrains Mono',monospace">under-constrained symbolic execution</span> (KLEE + Z3) verifies whether a UBI warning from Stage 1 is a real bug or a false positive.
+        </div>
+
+        <!-- Two-stage diagram -->
+        <div class="summary-box">
+          <div class="summary-box-header" style="color: var(--blue)">TWO-STAGE PIPELINE</div>
+          <div class="summary-box-body">
+            <div style="display:flex;align-items:center;justify-content:center;gap:0;flex-wrap:wrap;row-gap:10px">
+              <div class="stage-box" style="border-color:var(--teal);background:rgba(45,212,191,0.06)">
+                <div style="font-weight:700;color:var(--teal);margin-bottom:3px">Stage 1</div>
+                <div style="font-size:0.65rem;color:var(--muted)">Qualifier Analysis<br>~140k warnings</div>
+              </div>
+              <div class="stage-arrow">
+                <div class="stage-arrow-line" style="background:var(--orange);color:var(--orange)"></div>
+                <div class="stage-arrow-label">warnings.json</div>
+              </div>
+              <div class="stage-box" style="border-color:var(--orange);background:rgba(251,146,60,0.06)">
+                <div style="font-weight:700;color:var(--orange);margin-bottom:3px">Stage 2</div>
+                <div style="font-size:0.65rem;color:var(--muted)">Symbolic Execution<br>verifies feasibility</div>
+              </div>
+              <div class="stage-arrow">
+                <div class="stage-arrow-line" style="background:var(--green);color:var(--green)"></div>
+                <div class="stage-arrow-label">confirm_result.json</div>
+              </div>
+              <div class="stage-box" style="border-color:var(--green);background:rgba(74,222,128,0.06)">
+                <div style="font-weight:700;color:var(--green);margin-bottom:3px">Output</div>
+                <div style="font-size:0.65rem;color:var(--muted)">Confirmed bugs<br>+ concrete inputs</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="summary-box">
+          <div class="summary-box-header" style="color: var(--yellow)">WHY SYMBOLIC EXECUTION?</div>
+          <div class="summary-box-body">
+            <div class="qualifier-row">
+              <span class="q-label q-teal">Stage 1</span>
+              <span class="q-text">Qualifier analysis is a <strong>MAY analysis</strong> — it over-approximates, flagging ~140k potential UBI sites. Many are false positives due to infeasible paths.</span>
+            </div>
+            <div class="qualifier-row">
+              <span class="q-label q-orange">Stage 2</span>
+              <span class="q-text">Symbolic execution <strong>concretely verifies</strong> path feasibility using constraint solving. If KLEE finds a satisfying input, the bug is real. This filters false positives.</span>
+            </div>
+            <div class="qualifier-row">
+              <span class="q-label q-purple">UC-SE</span>
+              <span class="q-text"><strong>Under-constrained SE</strong> starts execution mid-program (at function entry) without needing whole-program context. Function parameters become symbolic values — enabling scalable per-function analysis.</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="summary-box">
+          <div class="summary-box-header" style="color: var(--purple)">ANALYSIS PIPELINE (THIS WALKTHROUGH)</div>
+          <div class="summary-box-body">
+            <div class="qualifier-row"><span class="q-label q-orange">②</span><span class="q-text">Receive <strong>warning + guidance</strong> from Stage 1 qualifier analysis</span></div>
+            <div class="qualifier-row"><span class="q-label q-red">③</span><span class="q-text">Build <strong>blacklist</strong> (avoid) and <strong>use</strong> (target) from guidance</span></div>
+            <div class="qualifier-row"><span class="q-label q-purple">④</span><span class="q-text">KLEE explores paths: symbolic <code>a</code>, guided by blacklist</span></div>
+            <div class="qualifier-row"><span class="q-label q-yellow">⑤</span><span class="q-text">Z3 solves path constraints to find <strong>concrete triggering input</strong></span></div>
+            <div class="qualifier-row"><span class="q-label q-green">⑥</span><span class="q-text">Bug confirmed with feasible path + concrete input</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 1: Warning from Stage 1 -->
+      <div class="step-card" id="step-1">
+        <div class="step-title">② Warning from Stage 1</div>
+        <div class="step-desc">
+          Stage 1 qualifier analysis detected that <code style="color:var(--orange)">backlog</code> may be used uninitialized at line 16. It outputs a <strong>warnings.json</strong> file containing the warning and guidance for KLEE.
+        </div>
+
+        <div class="warn-alert">
+          <div class="bug-icon" style="font-size:1.2rem">&#9888;</div>
+          <div class="warn-text">
+            <strong>Stage 1 Warning: backlog.c lines 16, 17</strong>
+            Variable <code>backlog</code> (qualified <span class="inset-tag q-red">uninit</span>) is used in a conditional branch <code>if(backlog)</code> and dereferenced <code>backlog->irq</code>. Qualifier conflict: <span class="inset-tag q-red">uninit</span> used where <span class="inset-tag q-green">init</span> required.
+          </div>
+        </div>
+
+        <div class="summary-box">
+          <div class="summary-box-header" style="color: var(--orange)">warnings.json</div>
+          <div class="summary-box-body">
+            <div class="json-block">
+              <span class="json-bracket">{</span><br>
+              &nbsp;&nbsp;<span class="json-key">"backlog.bc"</span>: <span class="json-bracket">{</span><br>
+              &nbsp;&nbsp;&nbsp;&nbsp;<span class="json-key">"warning_0"</span>: <span class="json-bracket">{</span><br>
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="json-key">"blacklist"</span>: <span class="json-bracket">[</span><br>
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="json-str json-highlight">"backlog.llbc-test-1"</span>,<br>
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="json-str">"backlog.llbc-test-3"</span>,<br>
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="json-str">"backlog.llbc-test-4"</span><br>
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="json-bracket">]</span>,<br>
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="json-key">"use"</span>: <span class="json-str json-highlight">"backlog.llbc-test-2"</span>,<br>
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="json-key">"warning"</span>: <span class="json-str">"%3 = load %struct.test_struct*,<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;%struct.test_struct** %backlog"</span><br>
+              &nbsp;&nbsp;&nbsp;&nbsp;<span class="json-bracket">}</span><br>
+              &nbsp;&nbsp;<span class="json-bracket">}</span><br>
+              <span class="json-bracket">}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="summary-box">
+          <div class="summary-box-header" style="color: var(--blue)">FIELD DEFINITIONS</div>
+          <div class="summary-box-body">
+            <div class="qualifier-row">
+              <span class="q-label q-red">blacklist</span>
+              <span class="q-text">LLVM basic blocks KLEE must <strong>never enter</strong>. These either <em>initialize</em> the variable (masking the bug) or <em>cannot reach</em> the use site.</span>
+            </div>
+            <div class="qualifier-row">
+              <span class="q-label q-yellow">use</span>
+              <span class="q-text">The target basic block where the uninitialized use occurs. KLEE's exploration <strong>endpoint</strong>.</span>
+            </div>
+            <div class="qualifier-row">
+              <span class="q-label q-muted">warning</span>
+              <span class="q-text">The specific LLVM IR instruction that reads the uninitialized variable — a <code>load</code> from <code>%backlog</code>.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 2: Build Guidance -->
+      <div class="step-card" id="step-2">
+        <div class="step-title">③ Build Guidance: Blacklist + Target</div>
+        <div class="step-desc">
+          The guidance maps onto the function's <strong>Control Flow Graph</strong>. KLEE now knows which basic blocks to avoid and which to target. This dramatically prunes the search space.
+        </div>
+
+        <div class="cfg-container">
+          <div class="cfg-title">CFG — test() with guidance overlay</div>
+          <div class="cfg-nodes">
+            <div class="cfg-node path-node">BB0 · test-0 (entry)<br><span style="font-size:0.65rem;color:var(--muted)">backlog = alloca (uninit), cpg->eng_st = BUSY</span></div>
+            <div class="cfg-connector">↓ branch: if (a)</div>
+            <div style="display:flex;gap:24px;align-items:flex-start">
+              <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+                <div style="font-size:0.65rem;color:var(--muted)">a != 0</div>
+                <div class="cfg-node avoid-node" style="min-width:150px">BB1 · test-1<br><span style="font-size:0.65rem">backlog = init<br><strong>BLACKLISTED</strong><br>(initializes variable)</span></div>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+                <div style="font-size:0.65rem;color:var(--orange)">a == 0 ✓</div>
+                <div style="color:var(--muted);font-size:0.65rem;padding:12px 0">skip →</div>
+              </div>
+            </div>
+            <div class="cfg-connector">↓ merge</div>
+            <div class="cfg-node use-node">BB2 · test-2 (USE)<br><span style="font-size:0.65rem">if(backlog) ← <strong>target use site</strong></span></div>
+            <div class="cfg-connector">↓ branch: if (backlog)</div>
+            <div style="display:flex;gap:24px;align-items:flex-start">
+              <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+                <div class="cfg-node avoid-node" style="min-width:130px">BB3 · test-3<br><span style="font-size:0.65rem"><strong>BLACKLISTED</strong><br>(past use site)</span></div>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+                <div class="cfg-node avoid-node" style="min-width:130px">BB4 · test-4<br><span style="font-size:0.65rem"><strong>BLACKLISTED</strong><br>(past use site)</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="summary-box">
+          <div class="summary-box-header" style="color: var(--red)">WHY EACH BB IS BLACKLISTED</div>
+          <div class="summary-box-body">
+            <table class="type-table">
+              <thead><tr><th>Basic Block</th><th>Reason</th><th>Rule</th></tr></thead>
+              <tbody>
+                <tr>
+                  <td style="color:var(--red)">test-1</td>
+                  <td>Assigns <code>backlog = init</code></td>
+                  <td><span class="inset-tag q-red">initializes variable</span></td>
+                </tr>
+                <tr>
+                  <td style="color:var(--red)">test-3</td>
+                  <td>Inside <code>if(backlog)</code> body</td>
+                  <td><span class="inset-tag q-muted">past the use site</span></td>
+                </tr>
+                <tr>
+                  <td style="color:var(--red)">test-4</td>
+                  <td>Function exit after use</td>
+                  <td><span class="inset-tag q-muted">past the use site</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="summary-box">
+          <div class="summary-box-header" style="color: var(--teal)">GUIDANCE EFFECT</div>
+          <div class="summary-box-body">
+            <div class="qualifier-row">
+              <span class="q-label q-orange">path</span>
+              <span class="q-text">KLEE can only traverse: <code>BB0 → BB2</code>. This means it must take the <strong>false branch</strong> at <code>if(a)</code>, skipping BB1. This is the only path that reaches BB2 without initializing <code>backlog</code>.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 3: KLEE explores paths -->
+      <div class="step-card" id="step-3">
+        <div class="step-title">④ KLEE Explores Paths</div>
+        <div class="step-desc">
+          KLEE begins <strong>under-constrained symbolic execution</strong> at function entry. Parameter <code style="color:var(--purple)">a</code> is a symbolic value — KLEE explores both branches, but the blacklist forces it away from BB1.
+        </div>
+
+        <div class="summary-box">
+          <div class="summary-box-header" style="color: var(--purple)">UNDER-CONSTRAINED SE SETUP</div>
+          <div class="summary-box-body">
+            <div class="qualifier-row">
+              <span class="q-label q-purple">entry</span>
+              <span class="q-text">KLEE starts at <code>test()</code> entry — no whole-program context. The parameter <code>a</code> is an unconstrained symbolic value: <code style="color:var(--purple)">a = symbolic_int("a")</code></span>
+            </div>
+            <div class="qualifier-row">
+              <span class="q-label q-muted">globals</span>
+              <span class="q-text">Global pointers <code>cpg</code>, <code>init</code> are lazily allocated symbolic objects. KLEE creates concrete memory for them on first access.</span>
+            </div>
+            <div class="qualifier-row">
+              <span class="q-label q-orange">local</span>
+              <span class="q-text"><code>backlog</code> is a stack <code>alloca</code> — its content is <strong>undefined</strong> (contains whatever was on the stack). KLEE tracks it as an uninitialized symbolic pointer.</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="summary-box">
+          <div class="summary-box-header" style="color: var(--orange)">PATH EXPLORATION</div>
+          <div class="summary-box-body">
+            <div class="constraint-chain">
+              <div class="constraint-row">
+                <span class="inset-tag q-purple">BB0</span>
+                <span style="color:var(--muted)">→</span>
+                <span>Execute entry: alloca %backlog, store ENGINE_BUSY</span>
+              </div>
+              <div style="padding-left:20px;color:var(--muted)">↓ branch on <code style="color:var(--purple)">a</code></div>
+              <div class="constraint-row" style="background:rgba(248,113,113,0.08);padding:6px 10px;border-radius:5px;border:1px solid rgba(248,113,113,0.15)">
+                <span class="inset-tag q-red">BB1</span>
+                <span style="color:var(--red)">BLOCKED — blacklisted (initializes backlog)</span>
+              </div>
+              <div class="constraint-row">
+                <span class="inset-tag q-orange">path</span>
+                <span style="color:var(--muted)">→</span>
+                <span>KLEE takes <strong>false branch</strong>: adds constraint <code style="color:var(--yellow)">a == 0</code></span>
+              </div>
+              <div style="padding-left:20px;color:var(--muted)">↓ falls through to merge</div>
+              <div class="constraint-row" style="background:rgba(250,204,21,0.08);padding:6px 10px;border-radius:5px;border:1px solid rgba(250,204,21,0.2)">
+                <span class="inset-tag q-yellow">BB2</span>
+                <span>Reached USE site: <code>load %backlog</code> — <strong>backlog is uninitialized!</strong></span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="summary-box">
+          <div class="summary-box-header" style="color: var(--yellow)">PATH CONSTRAINT COLLECTED</div>
+          <div class="summary-box-body">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:0.78rem;background:var(--bg);padding:10px 14px;border-radius:6px;border:1px solid var(--border)">
+              <span style="color:var(--muted)">PC = {</span> <span style="color:var(--yellow)">a == 0</span> <span style="color:var(--muted)">}</span>
+              <br><span style="color:var(--muted)">// single constraint: the branch at line 12 took the false path</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 4: Solve constraints -->
+      <div class="step-card" id="step-4">
+        <div class="step-title">⑤ Solve Path Constraints</div>
+        <div class="step-desc">
+          KLEE sends the accumulated path constraint to <span style="color:var(--yellow);font-family:'JetBrains Mono',monospace">Z3</span> (SMT solver) to find a <strong>concrete satisfying assignment</strong>. If SAT, the bug path is feasible.
+        </div>
+
+        <div class="summary-box">
+          <div class="summary-box-header" style="color: var(--yellow)">Z3 CONSTRAINT SOLVING</div>
+          <div class="summary-box-body">
+            <div class="constraint-chain">
+              <div class="constraint-row">
+                <span class="inset-tag q-muted">input</span>
+                <span style="color:var(--muted)">Path constraint:</span>
+                <code style="color:var(--yellow)">a == 0</code>
+              </div>
+              <div style="padding-left:20px;color:var(--muted)">↓ Z3 check-sat</div>
+              <div class="constraint-row" style="background:rgba(74,222,128,0.08);padding:6px 10px;border-radius:5px;border:1px solid rgba(74,222,128,0.2)">
+                <span class="inset-tag q-green">SAT</span>
+                <span style="color:var(--green)">Satisfiable! Concrete assignment found.</span>
+              </div>
+              <div style="padding-left:20px;color:var(--muted)">↓ get-model</div>
+              <div class="constraint-row">
+                <span class="inset-tag q-orange">input</span>
+                <code style="color:var(--orange)">a = 0x0000000000000000</code>
+                <span style="color:var(--muted)">(a = 0)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="summary-box">
+          <div class="summary-box-header" style="color: var(--blue)">WHAT Z3 PROVED</div>
+          <div class="summary-box-body">
+            <div class="qualifier-row">
+              <span class="q-label q-green">SAT</span>
+              <span class="q-text">There exists a concrete input (<code>a = 0</code>) that drives execution through BB0 → BB2 without passing through BB1. On this path, <code>backlog</code> is never assigned, so the <code>load</code> at BB2 reads an <strong>uninitialized stack value</strong>.</span>
+            </div>
+            <div class="qualifier-row">
+              <span class="q-label q-muted">note</span>
+              <span class="q-text">If Z3 returned <span class="inset-tag q-red">UNSAT</span>, it would mean no input can reach the use site without first initializing the variable — the warning would be a <strong>false positive</strong> and discarded.</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="summary-box">
+          <div class="summary-box-header" style="color: var(--purple)">KLEE BRANCH TRACE</div>
+          <div class="summary-box-body">
+            <div class="json-block">
+              <span class="json-key">"path"</span>: <span class="json-bracket">[</span><br>
+              &nbsp;&nbsp;<span class="json-str">"<span class="json-highlight">false</span> : br i1 %tobool, label %backlog.llbc-test-1, label %backlog.llbc-test-2"</span><br>
+              <span class="json-bracket">]</span>
+            </div>
+            <div class="qualifier-row" style="margin-top:6px">
+              <span class="q-label q-muted">read</span>
+              <span class="q-text">The branch <code>br i1 %tobool</code> (which tests <code>a</code>) took the <code style="color:var(--orange)">false</code> branch — jumping to test-2, skipping test-1. This is the only recorded branch decision.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 5: Bug confirmed -->
+      <div class="step-card" id="step-5">
+        <div class="step-title">⑥ Bug Confirmed!</div>
+        <div class="step-desc">
+          KLEE found a feasible execution path. UBITect writes the result to <strong>confirm_result.json</strong> with the concrete triggering input and the branch trace.
+        </div>
+
+        <div class="bug-alert">
+          <div class="bug-icon">&#9889;</div>
+          <div class="bug-text">
+            <strong>UBI BUG CONFIRMED — backlog.c:16</strong>
+            Variable <code>backlog</code> is used uninitialized in <code>if(backlog)</code>. Concrete trigger: call <code>test(0)</code>. The <code>if(a)</code> branch is skipped, <code>backlog</code> is never assigned, and the <code>load</code> reads garbage from the stack.
+          </div>
+        </div>
+
+        <div class="summary-box">
+          <div class="summary-box-header" style="color: var(--green)">confirm_result.json</div>
+          <div class="summary-box-body">
+            <div class="json-block">
+              <span class="json-bracket">{</span><br>
+              &nbsp;&nbsp;<span class="json-key">"path"</span>: <span class="json-bracket">[</span><br>
+              &nbsp;&nbsp;&nbsp;&nbsp;<span class="json-str">"false : br i1 %tobool, label<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;%backlog.llbc-test-1, label<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;%backlog.llbc-test-2"</span><br>
+              &nbsp;&nbsp;<span class="json-bracket">]</span>,<br>
+              &nbsp;&nbsp;<span class="json-key">"input_0"</span>: <span class="json-str json-highlight">"#x0000000000000000"</span><br>
+              <span class="json-bracket">}</span>
+            </div>
+            <div class="qualifier-row" style="margin-top:8px">
+              <span class="q-label q-orange">input</span>
+              <span class="q-text"><code>input_0 = #x0000000000000000</code> means parameter <code>a = 0</code>. This is the concrete value that triggers the bug.</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Feasible path trace -->
+        <div class="summary-box">
+          <div class="summary-box-header" style="color: var(--red)">FEASIBLE BUG PATH</div>
+          <div class="summary-box-body">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:0.74rem;display:flex;flex-direction:column;gap:5px">
+              <div style="display:flex;align-items:center;gap:8px"><span class="inset-tag q-purple">BB0</span><span>test(0): backlog = alloca (uninit), cpg->eng_st = BUSY</span></div>
+              <div style="padding-left:16px;color:var(--muted)">↓ a == 0 → false branch</div>
+              <div style="display:flex;align-items:center;gap:8px;padding-left:16px;opacity:0.4"><span class="inset-tag q-red">BB1</span><span style="text-decoration:line-through">backlog = init</span> <span style="color:var(--red)">(SKIPPED)</span></div>
+              <div style="padding-left:16px;color:var(--muted)">↓ falls through to merge</div>
+              <div style="display:flex;align-items:center;gap:8px;background:rgba(248,113,113,0.12);padding:6px 10px;border-radius:5px;border:1px solid rgba(248,113,113,0.3)">
+                <span class="inset-tag q-red">BUG</span>
+                <span style="color:var(--red)">BB2: load %backlog → reads uninitialized stack memory!</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Security impact -->
+        <div class="summary-box">
+          <div class="summary-box-header" style="color: var(--blue)">SECURITY IMPACT</div>
+          <div class="summary-box-body">
+            <div class="qualifier-row">
+              <span class="q-label q-red">UBI</span>
+              <span class="q-text">Reading uninitialized stack memory can leak <strong>kernel stack data</strong> (information disclosure) or cause <strong>undefined behavior</strong> — the uninitialized pointer could point anywhere, enabling arbitrary read/write.</span>
+            </div>
+            <div class="qualifier-row">
+              <span class="q-label q-green">fix</span>
+              <span class="q-text">Initialize at declaration: <code style="color:var(--green)">struct test_struct *backlog = NULL;</code></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Summary table -->
+        <div class="summary-box">
+          <div class="summary-box-header" style="color: var(--blue)">ANALYSIS SUMMARY</div>
+          <div class="summary-box-body">
+            <table class="type-table">
+              <thead><tr><th>Property</th><th>Value</th></tr></thead>
+              <tbody>
+                <tr><td>Analysis stage</td><td style="color:var(--orange)">Stage 2 — Symbolic Execution Verification</td></tr>
+                <tr><td>Engine</td><td style="color:var(--purple)">KLEE (under-constrained SE) + Z3</td></tr>
+                <tr><td>Bug type</td><td style="color:var(--red)">Use-Before-Initialization (UBI)</td></tr>
+                <tr><td>Bug location</td><td style="color:var(--orange)">backlog.c : line 16</td></tr>
+                <tr><td>Triggering input</td><td style="color:var(--yellow)">a = 0</td></tr>
+                <tr><td>Blacklisted BBs</td><td style="color:var(--red)">test-1, test-3, test-4</td></tr>
+                <tr><td>Feasible path</td><td>BB0 → BB2 (skip initialization)</td></tr>
+                <tr><td>Path constraint</td><td style="color:var(--yellow)">a == 0 (SAT)</td></tr>
+                <tr><td>Fix</td><td style="color:var(--green)">backlog = NULL at declaration</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /analysis-scroll -->
+
+    <div class="nav-bar">
+      <button class="nav-btn secondary" id="prevBtn" onclick="prevStep()" disabled>&#8592; Prev</button>
+      <div class="step-indicator">Step <span id="stepNum">1</span> of <span>6</span></div>
+      <button class="nav-btn primary" id="nextBtn" onclick="nextStep()">Next &#8594;</button>
+    </div>
+  </div>
+</main>
+
+<script>
+let currentStep = 0;
+const totalSteps = 6;
+
+const gutterColors = {
+  'highlight-init': 'var(--green)',
+  'highlight-uninit': 'var(--red)',
+  'highlight-bug': 'var(--red)',
+  'highlight-call': 'var(--blue)',
+  'highlight-return': 'var(--yellow)',
+  'highlight-avoid': '#7f4444',
+  'highlight-symbolic': 'var(--purple)',
+  'highlight-path': 'var(--orange)',
+};
+
+const steps = [
+  {
+    title: "Overview",
+    highlights: {},
+    annotations: {},
+  },
+  {
+    title: "Warning from Stage 1",
+    highlights: {
+      'ln-9':  'highlight-uninit',
+      'ln-16': 'highlight-bug',
+      'ln-17': 'highlight-bug',
+    },
+    annotations: {
+      'ann-9':  { text: 'backlog: uninit', cls: 'ann-uninit' },
+      'ann-16': { text: 'UBI: reads uninit', cls: 'ann-bug' },
+      'ann-17': { text: 'UBI: deref uninit', cls: 'ann-bug' },
+    },
+  },
+  {
+    title: "Build Guidance",
+    highlights: {
+      'ln-9':  'highlight-uninit',
+      'ln-13': 'highlight-avoid',
+      'ln-16': 'highlight-return',
+      'ln-17': 'highlight-avoid',
+      'ln-18': 'highlight-avoid',
+      'ln-20': 'highlight-avoid',
+      'bb-1':  'highlight-avoid',
+      'bb-2':  'highlight-return',
+      'bb-3':  'highlight-avoid',
+      'bb-4':  'highlight-avoid',
+    },
+    annotations: {
+      'ann-9':  { text: 'backlog: uninit', cls: 'ann-uninit' },
+      'ann-13': { text: 'BLACKLISTED (inits)', cls: 'ann-avoid' },
+      'ann-16': { text: 'USE target', cls: 'ann-constraint' },
+      'ann-17': { text: 'BLACKLISTED', cls: 'ann-avoid' },
+      'ann-18': { text: 'BLACKLISTED', cls: 'ann-avoid' },
+      'ann-20': { text: 'BLACKLISTED', cls: 'ann-avoid' },
+      'ann-bb-1': { text: 'BLACKLISTED', cls: 'ann-avoid' },
+      'ann-bb-2': { text: 'USE target', cls: 'ann-constraint' },
+      'ann-bb-3': { text: 'BLACKLISTED', cls: 'ann-avoid' },
+      'ann-bb-4': { text: 'BLACKLISTED', cls: 'ann-avoid' },
+    },
+  },
+  {
+    title: "KLEE Explores Paths",
+    highlights: {
+      'ln-8':  'highlight-symbolic',
+      'ln-9':  'highlight-path',
+      'ln-10': 'highlight-path',
+      'ln-12': 'highlight-path',
+      'ln-13': 'highlight-avoid',
+      'ln-16': 'highlight-bug',
+      'bb-0':  'highlight-path',
+      'bb-1':  'highlight-avoid',
+      'bb-2':  'highlight-bug',
+    },
+    annotations: {
+      'ann-8':  { text: 'a = symbolic', cls: 'ann-symbolic' },
+      'ann-9':  { text: 'backlog: uninit', cls: 'ann-uninit' },
+      'ann-12': { text: 'a==0 → false branch', cls: 'ann-path' },
+      'ann-13': { text: 'SKIPPED', cls: 'ann-avoid' },
+      'ann-16': { text: 'REACHED: load uninit!', cls: 'ann-bug' },
+      'ann-bb-0': { text: 'executed', cls: 'ann-path' },
+      'ann-bb-1': { text: 'blocked', cls: 'ann-avoid' },
+      'ann-bb-2': { text: 'USE reached!', cls: 'ann-bug' },
+    },
+  },
+  {
+    title: "Solve Constraints",
+    highlights: {
+      'ln-8':  'highlight-symbolic',
+      'ln-9':  'highlight-path',
+      'ln-10': 'highlight-path',
+      'ln-12': 'highlight-return',
+      'ln-16': 'highlight-bug',
+    },
+    annotations: {
+      'ann-8':  { text: 'a → 0x0', cls: 'ann-constraint' },
+      'ann-12': { text: 'a==0 → SAT!', cls: 'ann-constraint' },
+      'ann-16': { text: 'BUG path feasible', cls: 'ann-bug' },
+    },
+  },
+  {
+    title: "Bug Confirmed!",
+    highlights: {
+      'ln-8':  'highlight-init',
+      'ln-9':  'highlight-uninit',
+      'ln-10': 'highlight-path',
+      'ln-12': 'highlight-path',
+      'ln-16': 'highlight-bug',
+      'ln-17': 'highlight-bug',
+      'bb-0':  'highlight-path',
+      'bb-2':  'highlight-bug',
+    },
+    annotations: {
+      'ann-8':  { text: 'test(0)', cls: 'ann-path' },
+      'ann-9':  { text: 'uninit!', cls: 'ann-uninit' },
+      'ann-12': { text: 'false → skip init', cls: 'ann-path' },
+      'ann-16': { text: 'UBI BUG!', cls: 'ann-bug' },
+      'ann-17': { text: 'UBI BUG!', cls: 'ann-bug' },
+      'ann-bb-0': { text: 'entry', cls: 'ann-path' },
+      'ann-bb-2': { text: 'BUG HERE', cls: 'ann-bug' },
+    },
+  },
+];
+
+function clearHighlights() {
+  document.querySelectorAll('.code-line').forEach(el => {
+    el.classList.remove('highlight-init','highlight-uninit','highlight-bug','highlight-call','highlight-return','highlight-avoid','highlight-symbolic','highlight-path','dim');
+    const gutter = el.querySelector('.line-gutter');
+    if (gutter) gutter.style.background = 'transparent';
+  });
+  document.querySelectorAll('.line-annotation').forEach(el => {
+    el.classList.remove('show');
+    el.className = 'line-annotation';
+  });
+}
+
+function applyStep(idx) {
+  clearHighlights();
+  const step = steps[idx];
+
+  // Dim struct definitions (ln-1..7) on all steps except overview
+  if (idx > 0) {
+    for (let i = 1; i <= 7; i++) {
+      const el = document.getElementById('ln-' + i);
+      if (el) el.classList.add('dim');
+    }
+  }
+
+  // Apply highlights
+  Object.entries(step.highlights || {}).forEach(([id, cls]) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.classList.remove('dim');
+      el.classList.add(cls);
+      const gutter = el.querySelector('.line-gutter');
+      if (gutter && gutterColors[cls]) gutter.style.background = gutterColors[cls];
+    }
+  });
+
+  // Apply annotations
+  Object.entries(step.annotations || {}).forEach(([id, ann]) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.textContent = ann.text;
+      el.className = 'line-annotation show ' + ann.cls;
+    }
+  });
+
+  // Show step card
+  document.querySelectorAll('.step-card').forEach((el, i) => {
+    el.classList.toggle('visible', i === idx);
+  });
+
+  // Update pipeline
+  document.querySelectorAll('.pipe-step').forEach(el => {
+    const s = parseInt(el.dataset.step);
+    el.classList.toggle('active', s === idx);
+  });
+
+  // Update nav
+  document.getElementById('stepNum').textContent = idx + 1;
+  document.getElementById('prevBtn').disabled = idx === 0;
+  document.getElementById('nextBtn').disabled = false;
+  document.getElementById('nextBtn').textContent = idx === totalSteps - 2 ? 'Reveal Bug \u2192' : idx === totalSteps - 1 ? 'Restart' : 'Next \u2192';
+
+  // Update title
+  document.getElementById('analysisTitle').textContent = steps[idx].title || 'Analysis';
+}
+
+function nextStep() {
+  if (currentStep === totalSteps - 1) {
+    currentStep = 0;
+    applyStep(currentStep);
+  } else {
+    currentStep++;
+    applyStep(currentStep);
+  }
+}
+
+function prevStep() {
+  if (currentStep > 0) {
+    currentStep--;
+    applyStep(currentStep);
+  }
+}
+
+function goToStep(idx) {
+  currentStep = idx;
+  applyStep(currentStep);
+}
+
+// Keyboard navigation
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight' || e.key === 'ArrowDown') nextStep();
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') prevStep();
+});
+
+// Init
+applyStep(0);
+</script>
+</body>
+</html>
