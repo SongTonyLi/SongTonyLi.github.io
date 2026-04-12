@@ -903,7 +903,7 @@ function S09_ProgressiveCompression() {
       </div>
 
       {/* ── Compression level cards ── */}
-      <div className="flex gap-3">
+      <div className="flex gap-3 mobile-stack">
         {levels.map((lvl, i) => (
           <div
             key={i}
@@ -1125,7 +1125,7 @@ function S10_GoDeeper() {
           <span className="accent2">up close</span>.
         </h2>
 
-        <div className="flex gap-4 mt-4">
+        <div className="flex gap-4 mt-4 mobile-wrap">
           {['L1 Micro', 'L2 Orchestrator', 'L4 Memory', 'L3 Full', 'Snip'].map((name, i) => (
             <div
               key={i}

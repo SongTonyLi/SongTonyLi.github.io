@@ -3,7 +3,7 @@
  * 36 slides across 3 depth levels about Context Management in Claude Code.
  */
 
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useState, useCallback, useRef, type TouchEvent as ReactTouchEvent } from 'react'
 import { level1Slides } from './slides/Level1'
 import { level2Slides } from './slides/Level2'
 import { level3Slides } from './slides/Level3'
@@ -91,11 +91,31 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleKey)
   }, [next, prev, goTo, total])
 
+  // ── Touch swipe navigation ──
+  const touchStartX = useRef<number | null>(null)
+  const handleTouchStart = useCallback((e: ReactTouchEvent) => {
+    touchStartX.current = e.touches[0].clientX
+  }, [])
+  const handleTouchEnd = useCallback((e: ReactTouchEvent) => {
+    if (touchStartX.current === null) return
+    const diff = e.changedTouches[0].clientX - touchStartX.current
+    if (Math.abs(diff) > 50) {
+      if (diff > 0) prev()   // swipe right → previous slide
+      else next()             // swipe left  → next slide
+    }
+    touchStartX.current = null
+  }, [next, prev])
+
   const level = getLevel(current)
   const progress = ((current + 1) / total) * 100
 
   return (
-    <div className="h-screen w-screen overflow-hidden relative bg-grid" style={{ background: 'var(--bg)' }}>
+    <div
+      className="h-screen w-screen overflow-hidden relative bg-grid"
+      style={{ background: 'var(--bg)' }}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
       {/* Background grid overlay */}
       <div className="absolute inset-0 bg-grid pointer-events-none" />
 
@@ -135,7 +155,7 @@ export default function App() {
       </div>
 
       {/* Navigation dots (level separators) */}
-      <div className="fixed bottom-5 left-1/2 -translate-x-1/2 flex items-center gap-1 z-50">
+      <div className="nav-dots fixed bottom-5 left-1/2 -translate-x-1/2 flex items-center gap-1 z-50">
         {ALL_SLIDES.map((_, idx) => {
           const l = getLevel(idx)
           const isLevelStart = idx === 0 || idx === 9 || idx === 25
@@ -165,7 +185,8 @@ export default function App() {
 
       {/* Nav hint */}
       <div className="nav-hint">
-        ← → navigate{'  '}·{'  '}Space next{'  '}·{'  '}F fullscreen
+        <span className="hidden md:inline">← → navigate{'  '}·{'  '}Space next{'  '}·{'  '}F fullscreen</span>
+        <span className="md:hidden">swipe ← → to navigate</span>
       </div>
     </div>
   )

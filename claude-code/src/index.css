@@ -1549,3 +1549,83 @@ html, body, #root {
   animation: none;
   opacity: 0;
 }
+
+/* =========================================================================
+   Mobile Responsive — phones in portrait (≤ 768px)
+   Desktop is untouched: every rule below lives inside the media query.
+   ========================================================================= */
+@media (max-width: 768px) {
+
+  /* ── Typography ───────────────────────────────────────────────────────── */
+  .slide-title  { font-size: 8vw   !important; }
+  .slide-h2     { font-size: 6vw   !important; }
+  .slide-h3     { font-size: 3.8vw !important; }
+  .slide-body   { font-size: 4vw   !important; max-width: 95% !important; }
+  .slide-big    { font-size: 5vw   !important; max-width: 95% !important; }
+  .code-block   {
+    font-size: 2.8vw !important;
+    padding: 2vh 4vw !important;
+    max-width: 94vw  !important;
+    word-break: break-word !important;
+  }
+
+  /* ── Fixed chrome ─────────────────────────────────────────────────────── */
+  .level-badge { font-size: 2.5vw !important; }
+  .slide-num   { font-size: 2.5vw !important; }
+  .nav-hint    { font-size: 2.8vw !important; }
+
+  /* ── Slide container — scroll + compact padding ───────────────────────── */
+  .slide-container {
+    padding: 7vh 4vw 14vh !important;
+    overflow-y: auto  !important;
+    justify-content: flex-start !important;
+  }
+
+  /* ── Stack large-gap horizontal flex layouts ──────────────────────────
+     gap ≥ 5  → always stack (these are the 2/3-column card grids)
+     gap-4    → stack only when full-width (avoids touching inline icons)  */
+  .slide-container .flex.gap-4.w-full:not(.flex-col),
+  .slide-container .flex.gap-5:not(.flex-col):not(.items-center),
+  .slide-container .flex.gap-6:not(.flex-col):not(.items-center),
+  .slide-container .flex.gap-8:not(.flex-col):not(.items-center),
+  .mobile-stack {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    height: auto  !important;
+    max-height: none !important;
+  }
+
+  .slide-container .flex.gap-4.w-full:not(.flex-col) > *,
+  .slide-container .flex.gap-5:not(.flex-col):not(.items-center) > *,
+  .slide-container .flex.gap-6:not(.flex-col):not(.items-center) > *,
+  .slide-container .flex.gap-8:not(.flex-col):not(.items-center) > *,
+  .mobile-stack > * {
+    flex: none !important;
+    max-width: 100% !important;
+  }
+
+  /* ── Glass cards fill mobile width ────────────────────────────────────── */
+  .glass-card {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  /* ── Wrap utility (pills, badges, small card rows) ────────────────────── */
+  .mobile-wrap {
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+  }
+
+  /* ── Nav dots — tighter on narrow screens ─────────────────────────────── */
+  .nav-dots {
+    gap: 0 !important;
+  }
+  .nav-dots button {
+    transform: scale(0.75);
+  }
+
+  /* ── Diagram / ReactFlow containers ───────────────────────────────────── */
+  .diagram-container {
+    width: 95vw !important;
+  }
+}
