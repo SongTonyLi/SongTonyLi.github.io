@@ -3125,13 +3125,13 @@ function CompactionAnimation() {
       onMouseEnter={() => setHoverPaused(true)}
       onMouseLeave={() => setHoverPaused(false)}
       style={{
-        padding: '1.2vh 1.1vw',
+        padding: '2.5vh 1.8vw',
         background: '#0c0c14',
         border: '1px solid rgba(16,185,129,0.15)',
-        borderRadius: 8,
+        borderRadius: 12,
         display: 'flex',
         flexDirection: 'column',
-        gap: '1.05vh',
+        gap: '2vh',
       }}
     >
       <style>{`
@@ -3166,8 +3166,8 @@ function CompHeader({
 }) {
   return (
     <div className="flex items-center" style={{ gap: '0.7vw' }}>
-      <p className="mono font-bold" style={{ color: '#10b981', fontSize: '1.18vw', margin: 0 }}>
-        Compaction Algorithm
+      <p className="mono font-bold" style={{ color: '#10b981', fontSize: '1.4vw', margin: 0 }}>
+        Session Memory Compaction Algorithm
       </p>
       <span className="mono" style={{ fontSize: '0.9vw', color: COMP_COLORS.dim }}>
         (animated)
@@ -3643,65 +3643,9 @@ function S15b_SessionMemoryDeep() {
           </div>
         </div>
 
-        {/* ── Right: Template + Compaction algorithm ── */}
-        <div style={{ flex: '1 1 48%' }}>
-          <p className="mono font-bold mb-1" style={{ color: '#f59e0b', fontSize: '1.1vw' }}>Real Template Format</p>
-          <div
-            style={{
-              fontSize: '0.95vw',
-              padding: '1.4vh 1.15vw',
-              background: '#0c0c14',
-              border: '1px solid rgba(255,255,255,0.06)',
-              borderRadius: 8,
-              fontFamily: 'var(--font-body, system-ui, -apple-system, sans-serif)',
-              lineHeight: 1.45,
-              color: 'var(--fg)',
-            }}
-          >
-            {/* H1 */}
-            <div
-              style={{
-                fontSize: '1.28vw',
-                fontWeight: 700,
-                color: '#e8e8e3',
-                borderBottom: '1px solid rgba(255,255,255,0.12)',
-                paddingBottom: '0.4vh',
-                marginBottom: '0.65vh',
-              }}
-            >
-              Session Memory
-            </div>
-
-            {[
-              { h: 'Session Title', p: 'Brief description of what this session is about' },
-              { h: 'Current State', p: 'What is the current status of the work' },
-              { h: 'Task specification', p: 'Detailed description of current task requirements' },
-              { h: 'Files and Functions', p: 'Key files and functions being worked on' },
-              { h: 'Workflow', p: 'Steps being followed or processes in use' },
-            ].map((s, i) => (
-              <div key={i} style={{ marginBottom: '0.55vh' }}>
-                <div
-                  style={{
-                    fontSize: '1.04vw',
-                    fontWeight: 600,
-                    color: '#818cf8',
-                    marginBottom: '0.12vh',
-                  }}
-                >
-                  {s.h}
-                </div>
-                <div style={{ fontStyle: 'italic', color: '#8a8a86', fontSize: '0.88vw' }}>{s.p}</div>
-              </div>
-            ))}
-
-            <div style={{ color: '#6b6b66', fontStyle: 'italic', marginTop: '0.4vh', fontSize: '0.88vw' }}>
-              … + Errors, Docs, Learnings, Results, Worklog
-            </div>
-          </div>
-
-          <div style={{ marginTop: '1.6vh' }}>
-            <CompactionAnimation />
-          </div>
+        {/* ── Right: Compaction algorithm ── */}
+        <div style={{ flex: '1 1 48%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+          <CompactionAnimation />
         </div>
       </div>
     </div>
