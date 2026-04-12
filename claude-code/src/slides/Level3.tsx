@@ -1184,7 +1184,7 @@ function S30_Philosophy() {
     <div className="relative w-full h-full flex flex-col items-center justify-center">
       <Particles count={25} color="#818cf8" />
       <div className="reveal-stagger flex flex-col items-center gap-8 z-10">
-        <p className="slide-h3">The Philosophy</p>
+        <p className="slide-h3" style={{ marginTop: '4vh' }}>The Philosophy</p>
 
         <h1 className="slide-title gradient-text text-center" style={{ fontSize: '4.5vw', lineHeight: 1.15 }}>
           Delay expense.<br />
