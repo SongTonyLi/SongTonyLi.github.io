@@ -1040,7 +1040,7 @@ function S09_ProgressiveCompression() {
             <circle
               key={`r-${i}`}
               cx={tx(t)} cy={ty(v)} r="5"
-              fill={i === 0 ? '#f59e0b' : '#ef4444'} stroke={i === 0 ? '#92400e' : '#991b1b'} strokeWidth="1.2"
+              fill={i === aboveThresholdPts.length - 1 ? '#f59e0b' : '#ef4444'} stroke={i === aboveThresholdPts.length - 1 ? '#92400e' : '#991b1b'} strokeWidth="1.2"
               className="chart-fade-in"
               style={{ animationDelay: `${2.2 + i * 0.07}s` }}
             />
