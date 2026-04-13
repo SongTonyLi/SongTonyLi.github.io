@@ -61,6 +61,16 @@ export default function App() {
   const next = useCallback(() => goTo(current + 1, 'forward'), [goTo, current])
   const prev = useCallback(() => goTo(current - 1, 'backward'), [goTo, current])
 
+  // Cross-slide navigation via custom event
+  useEffect(() => {
+    function handleGoToSlide(e: Event) {
+      const detail = (e as CustomEvent<number>).detail
+      goTo(detail)
+    }
+    window.addEventListener('goToSlide', handleGoToSlide)
+    return () => window.removeEventListener('goToSlide', handleGoToSlide)
+  }, [goTo])
+
   // Keyboard navigation
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {

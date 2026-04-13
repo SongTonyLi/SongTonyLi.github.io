@@ -3598,7 +3598,12 @@ function S15b_SessionMemoryDeep() {
 
             {/* API invariants — what step 5 of the pipeline must preserve */}
             <p className="mono" style={{ fontSize: '0.93vw', color: '#c084fc', marginBottom: '0.7vh' }}>
-              <span style={{ color: '#6b6b66' }}>after expand:</span> adjustIndexToPreserveAPIInvariants() <span style={{ color: '#6b6b66', fontWeight: 400 }}>(more on slide 30)</span>
+              <span style={{ color: '#6b6b66' }}>after expand:</span> adjustIndexToPreserveAPIInvariants() <span
+                style={{ color: '#6b6b66', fontWeight: 400, cursor: 'pointer', textDecoration: 'underline', textDecorationStyle: 'dotted', textUnderlineOffset: '3px' }}
+                onClick={() => window.dispatchEvent(new CustomEvent('goToSlide', { detail: 30 }))}
+                onMouseEnter={e => (e.currentTarget.style.color = '#c084fc')}
+                onMouseLeave={e => (e.currentTarget.style.color = '#6b6b66')}
+              >(more on slide 31)</span>
             </p>
             <div className="flex flex-col" style={{ gap: '0.62vh' }}>
               <div

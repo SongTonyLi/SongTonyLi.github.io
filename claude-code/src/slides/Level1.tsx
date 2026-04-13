@@ -857,7 +857,7 @@ const S09_NORMAL_PTS: [number, number][] = [
   [1,15],[2,25],[3,42],[4,55],[5,65],[6,85],[7,115],[9,65],[10,120],[12,70],[13,140],[19,35],[20,100],
 ]
 const S09_ABOVE_PTS: [number, number][] = [[14,172],[15,175],[16,175],[17,178]]
-const S09_COMPACT_PTS: [number, number][] = [[8,170],[11,170],[18,180],[21,165],[22,165],[23,165],[24,165],[25,165]]
+const S09_COMPACT_PTS: [number, number][] = [[8,167],[11,167],[18,167],[21,165],[22,165],[23,165],[24,165],[25,165]]
 const S09_FREED_PTS: [number, number][] = [[8,53],[11,30],[18,20],[21,35],[22,52],[23,53],[24,55],[25,60]]
 const S09_DROPS = [
   { turn: 8, from: 170, to: 53, label: '-117K' },
@@ -991,8 +991,8 @@ function S09_ProgressiveCompression() {
 
           {/* Threshold line (167K) — orange dashed */}
           <line x1={60} y1={ty(167)} x2={970} y2={ty(167)} stroke="#f59e0b" strokeWidth="1.5" strokeDasharray="8,5" opacity="0.7" />
-          {/* Threshold label on right */}
-          <text x={978} y={ty(167) + 5} fill="#f59e0b" fontSize="14" fontWeight="700" fontFamily="var(--font-mono)">
+          {/* Threshold label on left y-axis */}
+          <text x={55} y={ty(167) + 5} fill="#f59e0b" fontSize="14" fontWeight="700" fontFamily="var(--font-mono)" textAnchor="end">
             167K
           </text>
 
@@ -1035,12 +1035,12 @@ function S09_ProgressiveCompression() {
             />
           ))}
 
-          {/* Above-threshold points (red) */}
+          {/* Above-threshold points (first yellow, rest red) */}
           {aboveThresholdPts.map(([t, v], i) => (
             <circle
               key={`r-${i}`}
               cx={tx(t)} cy={ty(v)} r="5"
-              fill="#ef4444" stroke="#991b1b" strokeWidth="1.2"
+              fill={i === 0 ? '#f59e0b' : '#ef4444'} stroke={i === 0 ? '#92400e' : '#991b1b'} strokeWidth="1.2"
               className="chart-fade-in"
               style={{ animationDelay: `${2.2 + i * 0.07}s` }}
             />
