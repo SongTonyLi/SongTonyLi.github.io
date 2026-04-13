@@ -1386,10 +1386,10 @@ function S11d_CacheEditPipeline() {
             style={{
               animationDelay: `${t.arrow1}s`,
               width: '3px',
-              height: '4.5vh',
+              height: '3vh',
               background: 'linear-gradient(180deg, rgba(129,140,248,0.15) 0%, rgba(34,211,238,0.55) 50%, rgba(16,185,129,0.15) 100%)',
-              marginTop: '0.8vh',
-              marginBottom: '0.4vh',
+              marginTop: '0.4vh',
+              marginBottom: '0.2vh',
             }}
           >
             {/* Traveling packet dot */}
@@ -1425,8 +1425,8 @@ function S11d_CacheEditPipeline() {
           </div>
 
           {/* ─── Stage 2 · API request body ─── */}
-          <div className="cep-stage" style={{ animationDelay: `${t.stage2}s`, marginTop: '0.4vh' }}>
-            <div className="flex items-baseline justify-between" style={{ marginBottom: '0.5vh' }}>
+          <div className="cep-stage" style={{ animationDelay: `${t.stage2}s`, marginTop: '0.2vh' }}>
+            <div className="flex items-baseline justify-between" style={{ marginBottom: '0.3vh' }}>
               <span className="mono" style={{ fontSize: '1.0vw', color: 'rgba(255,255,255,0.6)' }}>
                 <span style={{ color: '#22d3ee', marginRight: '0.4em' }}>2 ·</span>
                 api request body <span style={{ color: 'rgba(255,255,255,0.4)' }}>· sent to server</span>
@@ -1497,10 +1497,10 @@ function S11d_CacheEditPipeline() {
             style={{
               animationDelay: `${t.arrow2}s`,
               width: '3px',
-              height: '4.5vh',
+              height: '3vh',
               background: 'linear-gradient(180deg, rgba(34,211,238,0.55) 0%, rgba(245,158,11,0.55) 50%, rgba(239,68,68,0.4) 100%)',
-              marginTop: '0.8vh',
-              marginBottom: '0.4vh',
+              marginTop: '0.4vh',
+              marginBottom: '0.2vh',
             }}
           >
             <div
@@ -1584,14 +1584,14 @@ function S11d_CacheEditPipeline() {
             className="cep-narr"
             style={{
               animationDelay: `${t.narr3}s`,
-              marginTop: '1.1vh',
-              padding: '0.8vh 1vw',
+              marginTop: '0.6vh',
+              padding: '0.6vh 1vw',
               borderRadius: '10px',
               background: 'rgba(245,158,11,0.08)',
               border: '1px solid rgba(245,158,11,0.3)',
-              fontSize: '1.0vw',
+              fontSize: '0.9vw',
               color: '#fcd34d',
-              lineHeight: 1.5,
+              lineHeight: 1.45,
             }}
           >
             The K, V tensors for those tokens no longer exist on the server.
