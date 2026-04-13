@@ -1180,68 +1180,133 @@ const Particles = memo(function Particles({ count = 12, color = '#d97706' }: { c
 })
 
 function S30_Philosophy() {
+  const lines: { text: string; gradient: string; glow: string }[] = [
+    { text: 'Delay expense.', gradient: 'linear-gradient(135deg, #10b981, #34d399)', glow: 'rgba(16,185,129,0.25)' },
+    { text: 'Preserve information.', gradient: 'linear-gradient(135deg, #f59e0b, #fbbf24)', glow: 'rgba(245,158,11,0.25)' },
+    { text: 'Fail gracefully.', gradient: 'linear-gradient(135deg, #818cf8, #c084fc)', glow: 'rgba(129,140,248,0.25)' },
+  ]
+
+  const strategies = [
+    { icon: '✂️', label: 'Cheap first', color: '#10b981' },
+    { icon: '🧠', label: 'Reuse memory', color: '#f59e0b' },
+    { icon: '📝', label: 'LLM if needed', color: '#0ea5e9' },
+    { icon: '⚡', label: 'Circuit break', color: '#f43f5e' },
+    { icon: '🚨', label: 'Snip last', color: '#991b1b' },
+  ]
+
   return (
-    <div className="relative w-full h-full flex flex-col items-center justify-center">
-      <Particles count={25} color="#818cf8" />
-      <div className="reveal-stagger flex flex-col items-center gap-8 z-10">
-        <p className="slide-h3" style={{ marginTop: '4vh' }}>The Philosophy</p>
+    <div className="relative w-full h-full flex flex-col items-center justify-center overflow-hidden">
+      {/* Radial atmosphere */}
+      <div
+        className="absolute inset-0"
+        style={{
+          background: 'radial-gradient(ellipse 80% 60% at 50% 40%, rgba(129,140,248,0.06) 0%, rgba(217,119,6,0.03) 40%, transparent 70%)',
+          pointerEvents: 'none',
+        }}
+      />
+      <Particles count={40} color="#818cf8" />
+      <Particles count={12} color="#d97706" />
 
-        <h1 className="slide-title gradient-text text-center" style={{ fontSize: '4.5vw', lineHeight: 1.15 }}>
-          Delay expense.<br />
-          Preserve information.<br />
-          Fail gracefully.
-        </h1>
+      <div className="flex flex-col items-center z-10" style={{ gap: '2.5vh' }}>
 
-        <div className="flex gap-6 mt-8">
-          {[
-            { icon: '✂️', label: 'Cheap first', color: '#10b981' },
-            { icon: '🧠', label: 'Reuse memory', color: '#f59e0b' },
-            { icon: '📝', label: 'LLM if needed', color: '#0ea5e9' },
-            { icon: '⚡', label: 'Circuit break', color: '#f43f5e' },
-            { icon: '🚨', label: 'Snip last', color: '#991b1b' },
-          ].map((item, i) => (
-            <div
+        {/* "The Philosophy" label */}
+        <p
+          className="cascade-item slide-h3"
+          style={{ animationDelay: '0.15s', marginTop: '10vh', letterSpacing: '0.14em', fontSize: '1.3vw' }}
+        >
+          The Philosophy
+        </p>
+
+        {/* Hero — each line drops in with its own color */}
+        <div className="flex flex-col items-center" style={{ gap: '0.6vh' }}>
+          {lines.map((line, i) => (
+            <h1
               key={i}
-              className="cascade-item flex flex-col items-center gap-2 px-4 py-3 rounded-xl"
+              className="cascade-item"
               style={{
-                animationDelay: `${0.5 + i * 0.15}s`,
-                background: item.color + '10',
-                border: `1px solid ${item.color}30`,
+                animationDelay: `${0.35 + i * 0.3}s`,
+                fontFamily: 'var(--font-display)',
+                fontSize: '4.5vw',
+                fontWeight: 800,
+                lineHeight: 1.12,
+                letterSpacing: '-0.03em',
+                background: line.gradient,
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+                filter: `drop-shadow(0 0 30px ${line.glow})`,
               }}
             >
-              <span style={{ fontSize: '2rem' }}>{item.icon}</span>
-              <span className="mono text-[12px]" style={{ color: item.color }}>{item.label}</span>
+              {line.text}
+            </h1>
+          ))}
+        </div>
+
+        {/* Glowing divider */}
+        <div
+          className="cascade-item"
+          style={{
+            animationDelay: '1.3s',
+            width: '42vw',
+            height: '1px',
+            background: 'linear-gradient(90deg, transparent 0%, rgba(217,119,6,0.5) 30%, rgba(129,140,248,0.5) 70%, transparent 100%)',
+            margin: '0.5vh 0',
+          }}
+        />
+
+        {/* Strategy icons */}
+        <div className="flex gap-3" style={{ perspective: '800px' }}>
+          {strategies.map((item, i) => (
+            <div
+              key={i}
+              className="cascade-item flex flex-col items-center rounded-2xl"
+              style={{
+                animationDelay: `${1.4 + i * 0.1}s`,
+                padding: '1.2vh 1.2vw',
+                minWidth: '7vw',
+                gap: '0.6vh',
+                background: `linear-gradient(160deg, ${item.color}18 0%, ${item.color}08 100%)`,
+                border: `1px solid ${item.color}30`,
+                boxShadow: `0 4px 24px ${item.color}15, inset 0 1px 0 ${item.color}15`,
+                backdropFilter: 'blur(8px)',
+              }}
+            >
+              <span style={{ fontSize: '1.6rem', filter: `drop-shadow(0 0 8px ${item.color}60)` }}>{item.icon}</span>
+              <span className="mono font-semibold" style={{ color: item.color, fontSize: '0.7vw', letterSpacing: '0.04em' }}>{item.label}</span>
+              <div style={{ width: '60%', height: '2px', borderRadius: '1px', background: `linear-gradient(90deg, transparent, ${item.color}50, transparent)` }} />
             </div>
           ))}
         </div>
 
-        <p className="slide-body mt-6" style={{ fontSize: '1.6vw', maxWidth: '70%' }}>
-          Context management is how Claude Code maintains coherence across sessions
-          that would otherwise be impossible. It&apos;s not glamorous work — it&apos;s plumbing.
-          But it&apos;s the plumbing that makes <span className="accent">8-hour coding sessions</span> possible.
+        {/* One punchy line */}
+        <p
+          className="cascade-item mono text-center"
+          style={{ animationDelay: '2s', fontSize: '1.3vw', color: 'var(--dim)' }}
+        >
+          The plumbing that makes <span className="accent">8-hour coding sessions</span> possible.
         </p>
 
         {/* ── Teaser: Level 4 — Real Runtime Analysis ── */}
         <div
-          className="cascade-item relative flex flex-col items-center rounded-2xl"
+          className="cascade-item relative flex flex-col items-center rounded-2xl border-glow"
           style={{
-            animationDelay: '1.6s',
-            marginTop: '2.2vh',
-            padding: '1.6vh 2vw',
-            maxWidth: '62vw',
-            background: 'linear-gradient(135deg, rgba(129,140,248,0.1), rgba(192,132,252,0.08), rgba(16,185,129,0.08))',
-            border: '1px dashed rgba(129,140,248,0.4)',
-            boxShadow: '0 0 60px rgba(129,140,248,0.12)',
+            animationDelay: '2.2s',
+            marginTop: '0.5vh',
+            padding: '1.6vh 2.2vw',
+            maxWidth: '58vw',
+            background: 'linear-gradient(135deg, rgba(129,140,248,0.08), rgba(192,132,252,0.06), rgba(16,185,129,0.06))',
+            border: '1px solid rgba(129,140,248,0.25)',
+            boxShadow: '0 0 80px rgba(129,140,248,0.08), inset 0 1px 0 rgba(255,255,255,0.03)',
           }}
         >
           <p
             className="mono font-bold"
             style={{
-              fontSize: '0.78vw',
+              fontSize: '0.72vw',
               color: '#a5b4fc',
               textTransform: 'uppercase',
-              letterSpacing: '0.18em',
-              marginBottom: '0.6vh',
+              letterSpacing: '0.2em',
+              marginBottom: '0.5vh',
             }}
           >
             next up · coming soon
@@ -1250,7 +1315,7 @@ function S30_Philosophy() {
             className="font-bold text-center"
             style={{
               fontFamily: 'var(--font-display)',
-              fontSize: '2.2vw',
+              fontSize: '2vw',
               lineHeight: 1.15,
               letterSpacing: '-0.02em',
               background: 'linear-gradient(135deg, #818cf8 0%, #c084fc 50%, #10b981 100%)',
@@ -1261,32 +1326,31 @@ function S30_Philosophy() {
           >
             Level 4 — Real Runtime Analysis
           </p>
-          <p className="text-center mt-1" style={{ fontSize: '1.1vw', color: 'var(--dim)', lineHeight: 1.45, maxWidth: '54vw' }}>
+          <p className="text-center mt-1" style={{ fontSize: '1vw', color: 'var(--dim)', lineHeight: 1.4, maxWidth: '50vw' }}>
             So far we reverse-engineered the code. Next: watch compaction{' '}
             <em style={{ color: 'var(--fg)' }}>actually happen</em> on a live session.
           </p>
-          <div className="flex items-center gap-3 mt-3 flex-wrap justify-center">
+          <div className="flex items-center gap-3 mt-2 flex-wrap justify-center">
             <span
               className="mono font-bold rounded-lg"
               style={{
-                padding: '0.5vh 0.8vw',
+                padding: '0.4vh 0.7vw',
                 background: 'rgba(192,132,252,0.18)',
-                border: '1px solid rgba(192,132,252,0.4)',
+                border: '1px solid rgba(192,132,252,0.35)',
                 color: '#c084fc',
-                fontSize: '0.95vw',
-                letterSpacing: '-0.01em',
+                fontSize: '0.85vw',
               }}
             >
               claude-plus-plus
             </span>
-            <span style={{ color: '#666', fontSize: '0.9vw' }}>·</span>
-            <span className="mono" style={{ color: 'var(--dim)', fontSize: '0.85vw' }}>
+            <span style={{ color: '#555', fontSize: '0.85vw' }}>·</span>
+            <span className="mono" style={{ color: 'var(--dim)', fontSize: '0.8vw' }}>
               live trace · token timelines · decision-tree replay
             </span>
           </div>
         </div>
 
-        <p className="mono text-sm mt-4" style={{ color: 'var(--dim)' }}>
+        <p className="cascade-item mono" style={{ animationDelay: '2.6s', fontSize: '0.9vw', color: 'var(--dim)', marginTop: '0.5vh' }}>
           fin.
         </p>
       </div>

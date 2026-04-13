@@ -2538,8 +2538,8 @@ function S14_DecisionTree() {
     { id: 'e3b', source: 'flags', target: 'skip', sourceHandle: 'right', animated: true, style: { stroke: '#64748b', strokeWidth: 1.5, strokeDasharray: '4 4' }, label: 'disabled', labelStyle: { fill: '#6b6b66', fontSize: 10 } },
     { id: 'e4', source: 'tokens', target: 'cb', animated: true, style: { stroke: '#d97706', strokeWidth: 2 }, label: 'over threshold', labelStyle: { fill: '#d97706', fontSize: 10 } },
     { id: 'e5a', source: 'cb', target: 'sm', animated: true, style: { stroke: '#f59e0b', strokeWidth: 2 }, label: 'healthy', labelStyle: { fill: '#f59e0b', fontSize: 10 } },
-    { id: 'e5b', source: 'cb', target: 'fc', animated: true, style: { stroke: '#f43f5e', strokeWidth: 2, strokeDasharray: '4 4' }, label: '3+ fails', labelStyle: { fill: '#f43f5e', fontSize: 10 } },
-    { id: 'e6', source: 'sm', target: 'fc', sourceHandle: 'right', targetHandle: 'left', animated: true, style: { stroke: '#f59e0b', strokeWidth: 1.5, strokeDasharray: '6 4' }, label: 'null', labelStyle: { fill: '#6b6b66', fontSize: 10 } },
+    { id: 'e5b', source: 'cb', target: 'fc', animated: true, style: { stroke: '#f43f5e', strokeWidth: 2, strokeDasharray: '4 4' }, label: 'unhealthy', labelStyle: { fill: '#f43f5e', fontSize: 10 } },
+    { id: 'e6', source: 'sm', target: 'fc', sourceHandle: 'right', targetHandle: 'left', animated: true, style: { stroke: '#f59e0b', strokeWidth: 1.5, strokeDasharray: '6 4' }, label: 'fallback', labelStyle: { fill: '#6b6b66', fontSize: 10 } },
   ], [])
 
   const detail = selectedNode ? DECISION_DETAILS[selectedNode] : null
