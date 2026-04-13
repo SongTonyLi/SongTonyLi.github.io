@@ -1551,6 +1551,135 @@ html, body, #root {
 }
 
 /* =========================================================================
+   Slide 24: Error Recovery Animations
+   ========================================================================= */
+
+/* Red glow pulse on the error trigger */
+@keyframes s24ErrorPulse {
+  0%, 100% { box-shadow: 0 0 12px rgba(239,68,68,0.12); }
+  50%      { box-shadow: 0 0 32px rgba(239,68,68,0.4), 0 0 64px rgba(239,68,68,0.08); }
+}
+
+/* Amber glow for highlighted Layer 2 */
+@keyframes s24LayerGlow {
+  0%, 100% { box-shadow: 0 0 20px rgba(245,158,11,0.1); }
+  50%      { box-shadow: 0 0 40px rgba(245,158,11,0.3), 0 0 72px rgba(245,158,11,0.06); }
+}
+
+/* Skull death pulse for final error */
+@keyframes s24DeathPulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(153,27,27,0.1); }
+  50%      { box-shadow: 0 0 28px rgba(220,38,38,0.35), 0 0 56px rgba(220,38,38,0.08); }
+}
+
+/* Flowing dot traveling down the fail arrows */
+@keyframes s24FailDot {
+  0%   { top: -3px; opacity: 0; }
+  15%  { opacity: 1; }
+  85%  { opacity: 0.6; }
+  100% { top: calc(100% - 3px); opacity: 0; }
+}
+
+/* Card border glow (uses CSS vars for color) */
+@keyframes s24CardGlow {
+  0%, 100% { border-color: var(--s24-glow-dim); box-shadow: 0 0 0 transparent; }
+  50%      { border-color: var(--s24-glow-bright); box-shadow: 0 0 24px var(--s24-glow-dim); }
+}
+
+/* Layer hover lift */
+.s24-layer {
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+              box-shadow 0.3s ease;
+}
+.s24-layer:hover {
+  transform: translateY(-2px) scale(1.012);
+}
+
+/* Composite class: replaces cascade-item for elements needing persistent animations */
+.s24-anim {
+  opacity: 0;
+}
+
+/* Kill infinite anims on inactive slides */
+.slide-container:not(.active) .s24-anim {
+  animation: none !important;
+  opacity: 0;
+}
+.slide-container:not(.active) .s24-fail-dot {
+  animation: none !important;
+  opacity: 0;
+}
+.slide-container:not(.active) .s24-card-glow {
+  animation: none !important;
+}
+
+/* =========================================================================
+   Slide 34: Memory Security Animations
+   ========================================================================= */
+
+/* Red glow for path-security insight card */
+@keyframes s34PathPulse {
+  0%, 100% { box-shadow: 0 0 10px rgba(244,63,94,0.08); }
+  50%      { box-shadow: 0 0 28px rgba(244,63,94,0.28), 0 0 56px rgba(244,63,94,0.06); }
+}
+
+/* Amber glow for secret-scanning cards */
+@keyframes s34SecretPulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(245,158,11,0.06); }
+  50%      { box-shadow: 0 0 26px rgba(245,158,11,0.25), 0 0 50px rgba(245,158,11,0.05); }
+}
+
+/* Card border glow with CSS vars (reusable across slide 34) */
+@keyframes s34CardGlow {
+  0%, 100% { border-color: var(--s34-glow-dim); box-shadow: 0 0 0 transparent; }
+  50%      { border-color: var(--s34-glow-bright); box-shadow: 0 0 22px var(--s34-glow-dim); }
+}
+
+/* Subtle shield-scan sweep across security items */
+@keyframes s34ShieldScan {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Security item hover: shift right like unlocking a layer */
+.s34-security-item {
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+              border-color 0.3s ease,
+              box-shadow 0.3s ease;
+}
+.s34-security-item:hover {
+  transform: translateX(6px) scale(1.012);
+  border-color: rgba(244,63,94,0.35) !important;
+  box-shadow: 0 0 16px rgba(244,63,94,0.12);
+}
+
+/* Sync card hover lift */
+.s34-sync-card {
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+              box-shadow 0.3s ease;
+}
+.s34-sync-card:hover {
+  transform: translateY(-2px) scale(1.012);
+}
+
+/* Composite class for cascade + persistent */
+.s34-anim {
+  opacity: 0;
+}
+
+/* Kill infinite anims on inactive */
+.slide-container:not(.active) .s34-anim {
+  animation: none !important;
+  opacity: 0;
+}
+.slide-container:not(.active) .s34-security-item {
+  background-image: none !important;
+}
+.slide-container:not(.active) .s34-card-glow {
+  animation: none !important;
+}
+
+/* =========================================================================
    Mobile Responsive — phones in portrait (≤ 768px)
    Desktop is untouched: every rule below lives inside the media query.
    ========================================================================= */

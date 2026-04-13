@@ -326,8 +326,9 @@ function S24_ReactiveCompact() {
         {/* ── Left: 5-layer pipeline ── */}
         <div style={{ flex: '1 1 52%' }}>
           {/* Trigger */}
-          <div className="cascade-item flex items-center gap-4 px-5 py-3 rounded-xl mb-2" style={{
-            animationDelay: '0.2s',
+          <div className="s24-anim flex items-center gap-4 px-5 py-3 rounded-xl mb-2" style={{
+            opacity: 0,
+            animation: 'cascade 0.6s cubic-bezier(0.34,1.56,0.64,1) 0.2s forwards, s24ErrorPulse 2.5s ease-in-out 1s infinite',
             background: 'rgba(239,68,68,0.08)',
             border: '1px solid rgba(239,68,68,0.25)',
           }}>
@@ -342,12 +343,16 @@ function S24_ReactiveCompact() {
           {recoveryLayers.map((layer, i) => (
             <div key={i}>
               <div
-                className="cascade-item flex items-center gap-4 px-5 py-3 rounded-xl"
+                className={`${layer.highlight ? 's24-anim' : 'cascade-item'} s24-layer flex items-center gap-4 px-5 py-3 rounded-xl`}
                 style={{
-                  animationDelay: `${0.35 + i * 0.16}s`,
+                  ...(layer.highlight ? {
+                    opacity: 0,
+                    animation: `cascade 0.6s cubic-bezier(0.34,1.56,0.64,1) ${0.35 + i * 0.16}s forwards, s24LayerGlow 3s ease-in-out 1.5s infinite`,
+                  } : {
+                    animationDelay: `${0.35 + i * 0.16}s`,
+                  }),
                   background: layer.highlight ? layer.color + '14' : layer.color + '06',
                   border: `2px solid ${layer.highlight ? layer.color + '45' : layer.color + '18'}`,
-                  boxShadow: layer.highlight ? `0 0 24px ${layer.color}18` : 'none',
                 }}
               >
                 <div className="flex items-center justify-center rounded-lg" style={{
@@ -366,16 +371,31 @@ function S24_ReactiveCompact() {
                 <span className="mono" style={{ fontSize: '0.8vw', color: '#666' }}>{layer.source}</span>
               </div>
               {i < 4 && (
-                <div className="cascade-item flex items-center justify-center" style={{ animationDelay: `${0.42 + i * 0.16}s`, height: '2.2vh' }}>
+                <div className="cascade-item flex items-center justify-center" style={{ animationDelay: `${0.42 + i * 0.16}s`, height: '2.2vh', position: 'relative' }}>
                   <span className="mono font-bold" style={{ fontSize: '0.85vw', color: 'rgba(244,63,94,0.45)' }}>↓ fails</span>
+                  {/* Animated flowing dot */}
+                  <span className="s24-fail-dot" style={{
+                    position: 'absolute',
+                    left: '50%',
+                    top: '-3px',
+                    width: '5px',
+                    height: '5px',
+                    borderRadius: '50%',
+                    background: 'rgba(244,63,94,0.7)',
+                    boxShadow: '0 0 8px rgba(244,63,94,0.5)',
+                    transform: 'translateX(-50%)',
+                    animation: `s24FailDot 1.8s ease-in-out ${1.5 + i * 0.35}s infinite`,
+                    opacity: 0,
+                  }} />
                 </div>
               )}
             </div>
           ))}
 
           {/* Final */}
-          <div className="cascade-item flex items-center gap-4 px-5 py-2.5 rounded-xl mt-1" style={{
-            animationDelay: '1.3s',
+          <div className="s24-anim flex items-center gap-4 px-5 py-2.5 rounded-xl mt-1" style={{
+            opacity: 0,
+            animation: 'cascade 0.6s cubic-bezier(0.34,1.56,0.64,1) 1.3s forwards, s24DeathPulse 2s ease-in-out 2s infinite',
             background: 'rgba(153,27,27,0.12)',
             border: '1px solid rgba(153,27,27,0.3)',
           }}>
@@ -413,7 +433,12 @@ function S24_ReactiveCompact() {
           </div>
 
           {/* PTL retry */}
-          <div className="cascade-item glass-card p-5 mt-4" style={{ animationDelay: '1.2s', borderColor: 'rgba(245,158,11,0.2)' }}>
+          <div className="s24-anim s24-card-glow glass-card p-5 mt-4" style={{
+            opacity: 0,
+            animation: 'cascade 0.6s cubic-bezier(0.34,1.56,0.64,1) 1.2s forwards, s24CardGlow 3.5s ease-in-out 2s infinite',
+            '--s24-glow-dim': 'rgba(245,158,11,0.15)',
+            '--s24-glow-bright': 'rgba(245,158,11,0.45)',
+          } as React.CSSProperties}>
             <p className="mono font-bold" style={{ color: '#f59e0b', fontSize: '1.1vw' }}>PTL Retry (Layer 2)</p>
             <p className="mt-2 leading-relaxed" style={{ color: 'var(--dim)', fontSize: '1.0vw' }}>
               <code style={{ color: '#f59e0b' }}>truncateHeadForPTLRetry()</code> drops oldest API round groups.
@@ -422,7 +447,12 @@ function S24_ReactiveCompact() {
           </div>
 
           {/* Insight */}
-          <div className="cascade-item glass-card p-5 mt-3" style={{ animationDelay: '1.4s', borderColor: 'rgba(129,140,248,0.2)' }}>
+          <div className="s24-anim s24-card-glow glass-card p-5 mt-3" style={{
+            opacity: 0,
+            animation: 'cascade 0.6s cubic-bezier(0.34,1.56,0.64,1) 1.4s forwards, s24CardGlow 3.5s ease-in-out 2.3s infinite',
+            '--s24-glow-dim': 'rgba(129,140,248,0.15)',
+            '--s24-glow-bright': 'rgba(129,140,248,0.45)',
+          } as React.CSSProperties}>
             <p className="mono font-bold" style={{ color: '#818cf8', fontSize: '1.1vw' }}>Design Insight</p>
             <p className="mt-2 leading-relaxed" style={{ color: 'var(--dim)', fontSize: '1.0vw' }}>
               Compression is layers 1-2 of a <strong style={{ color: 'var(--fg)' }}>5-layer defense</strong>.
@@ -989,19 +1019,29 @@ function S29_MemorySecurity() {
           ].map((item, i) => (
             <div
               key={i}
-              className="cascade-item flex items-center gap-2 rounded-lg"
+              className="cascade-item s34-security-item flex items-center gap-2 rounded-lg"
               style={{
                 padding: '0.85vh 0.85vw',
                 animationDelay: `${0.2 + i * 0.07}s`,
                 background: 'rgba(244,63,94,0.05)',
                 border: '1px solid rgba(244,63,94,0.12)',
+                backgroundImage: 'linear-gradient(90deg, transparent 0%, rgba(244,63,94,0.06) 50%, transparent 100%)',
+                backgroundSize: '200% 100%',
+                backgroundPosition: '200% 0',
+                animation: `cascade 0.6s cubic-bezier(0.34,1.56,0.64,1) ${0.2 + i * 0.07}s forwards, s34ShieldScan 4s ease-in-out ${2 + i * 0.5}s infinite`,
+                opacity: 0,
               }}
             >
               <span style={{ color: 'var(--fg)', fontSize: '0.9vw' }}>{item.check}</span>
               <span className="ml-auto mono" style={{ color: '#f43f5e', fontSize: '0.78vw' }}>→ {item.defense}</span>
             </div>
           ))}
-          <div className="cascade-item glass-card mt-1" style={{ padding: '1.1vh 1vw', animationDelay: '0.8s', borderColor: 'rgba(244,63,94,0.12)' }}>
+          <div className="s34-anim glass-card mt-1" style={{
+            padding: '1.1vh 1vw',
+            opacity: 0,
+            animation: 'cascade 0.6s cubic-bezier(0.34,1.56,0.64,1) 0.8s forwards, s34PathPulse 3s ease-in-out 2s infinite',
+            borderColor: 'rgba(244,63,94,0.12)',
+          }}>
             <p className="leading-relaxed" style={{ color: 'var(--dim)', fontSize: '0.85vw', lineHeight: 1.45 }}>
               <strong style={{ color: '#f43f5e' }}>Key design:</strong> <code style={{ color: '#f43f5e' }}>projectSettings</code> excluded
               as source for <code>autoMemoryDirectory</code> — a malicious repo could redirect writes to <code>~/.ssh</code>.
@@ -1013,7 +1053,11 @@ function S29_MemorySecurity() {
         {/* Middle: Secret Scanning */}
         <div className="flex-1 flex flex-col gap-2">
           <p className="mono font-bold mb-1" style={{ color: '#f59e0b', fontSize: '1vw' }}>Secret Scanning (30 patterns)</p>
-          <div className="glass-card" style={{ padding: '1.2vh 1vw' }}>
+          <div className="s34-anim glass-card" style={{
+            padding: '1.2vh 1vw',
+            opacity: 0,
+            animation: 'cascade 0.6s cubic-bezier(0.34,1.56,0.64,1) 0.3s forwards, s34SecretPulse 3.5s ease-in-out 1.8s infinite',
+          }}>
             <div className="flex flex-col" style={{ gap: '0.55vh' }}>
               {[
                 { cat: 'Cloud', items: 'AWS (A3T/AKIA/ASIA), GCP (AIza), Azure, DO', n: 4 },
@@ -1033,7 +1077,13 @@ function S29_MemorySecurity() {
               ))}
             </div>
           </div>
-          <div className="glass-card" style={{ padding: '1.1vh 1vw' }}>
+          <div className="s34-anim s34-card-glow glass-card" style={{
+            padding: '1.1vh 1vw',
+            opacity: 0,
+            animation: 'cascade 0.6s cubic-bezier(0.34,1.56,0.64,1) 0.5s forwards, s34CardGlow 3.5s ease-in-out 2.2s infinite',
+            '--s34-glow-dim': 'rgba(245,158,11,0.12)',
+            '--s34-glow-bright': 'rgba(245,158,11,0.4)',
+          } as React.CSSProperties}>
             <p className="mono font-bold" style={{ color: '#f59e0b', fontSize: '0.95vw' }}>Dual-Layer Defense</p>
             <p className="mt-1 leading-relaxed" style={{ color: 'var(--dim)', fontSize: '0.85vw', lineHeight: 1.45 }}>
               <strong style={{ color: 'var(--fg)' }}>Write-time:</strong> teamMemSecretGuard blocks the write call{'\n'}
@@ -1056,15 +1106,27 @@ function S29_MemorySecurity() {
           ].map((item, i) => (
             <div
               key={i}
-              className="cascade-item glass-card"
-              style={{ padding: '1.1vh 1vw', animationDelay: `${0.4 + i * 0.1}s` }}
+              className="s34-anim s34-sync-card s34-card-glow glass-card"
+              style={{
+                padding: '1.1vh 1vw',
+                opacity: 0,
+                animation: `cascade 0.6s cubic-bezier(0.34,1.56,0.64,1) ${0.4 + i * 0.1}s forwards, s34CardGlow 3.5s ease-in-out ${2 + i * 0.4}s infinite`,
+                '--s34-glow-dim': `${item.color}18`,
+                '--s34-glow-bright': `${item.color}55`,
+              } as React.CSSProperties}
             >
               <p className="mono font-bold" style={{ color: item.color, fontSize: '0.95vw' }}>{item.step}</p>
               <p className="mt-1 leading-relaxed" style={{ color: 'var(--dim)', fontSize: '0.85vw', lineHeight: 1.4 }}>{item.desc}</p>
             </div>
           ))}
 
-          <div className="cascade-item glass-card" style={{ padding: '1.1vh 1vw', animationDelay: '0.9s', borderColor: 'rgba(139,92,246,0.15)' }}>
+          <div className="s34-anim s34-sync-card s34-card-glow glass-card" style={{
+            padding: '1.1vh 1vw',
+            opacity: 0,
+            animation: 'cascade 0.6s cubic-bezier(0.34,1.56,0.64,1) 0.9s forwards, s34CardGlow 3.5s ease-in-out 3.6s infinite',
+            '--s34-glow-dim': 'rgba(139,92,246,0.12)',
+            '--s34-glow-bright': 'rgba(139,92,246,0.45)',
+          } as React.CSSProperties}>
             <p className="mono font-bold" style={{ color: '#8b5cf6', fontSize: '0.95vw' }}>KAIROS Mode</p>
             <p className="mt-1 leading-relaxed" style={{ color: 'var(--dim)', fontSize: '0.85vw', lineHeight: 1.45 }}>
               Append-only daily logs (<code style={{ color: '#8b5cf6' }}>logs/YYYY/MM/YYYY-MM-DD.md</code>).
@@ -1073,7 +1135,13 @@ function S29_MemorySecurity() {
             </p>
           </div>
 
-          <div className="cascade-item glass-card" style={{ padding: '1.1vh 1vw', animationDelay: '1.0s' }}>
+          <div className="s34-anim s34-sync-card s34-card-glow glass-card" style={{
+            padding: '1.1vh 1vw',
+            opacity: 0,
+            animation: 'cascade 0.6s cubic-bezier(0.34,1.56,0.64,1) 1.0s forwards, s34CardGlow 3.5s ease-in-out 4s infinite',
+            '--s34-glow-dim': 'rgba(16,185,129,0.12)',
+            '--s34-glow-bright': 'rgba(16,185,129,0.45)',
+          } as React.CSSProperties}>
             <p className="mono font-bold" style={{ color: '#10b981', fontSize: '0.95vw' }}>Prerequisites</p>
             <p className="mt-1 leading-relaxed" style={{ color: 'var(--dim)', fontSize: '0.85vw', lineHeight: 1.45 }}>
               TEAMMEM flag + GrowthBook + first-party OAuth (inference + profile scopes) + GitHub remote
