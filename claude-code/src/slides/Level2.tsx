@@ -29,28 +29,28 @@ function InteractiveNode({ data }: { data: Record<string, unknown> }) {
   return (
     <div
       onClick={onClick}
-      className="ctx-node-inner px-4 py-3 rounded-xl border-2 text-white shadow-lg cursor-pointer hover:brightness-110 transition-all duration-300"
+      className="ctx-node-inner px-5 py-4 rounded-xl border-2 text-white shadow-lg cursor-pointer hover:brightness-110 transition-all duration-300"
       style={{
         background: data.bg as string,
         borderColor: data.borderColor as string,
-        minWidth: 220,
+        minWidth: 270,
         ['--glow-color' as string]: data.glow as string,
       }}
     >
       <Handle type="target" position={Position.Top} style={{ opacity: 0 }} />
       <div className="flex items-center gap-2 mb-1">
-        <span style={{ fontSize: '1.1rem' }}>{String(data.icon)}</span>
-        <span className="font-bold text-sm uppercase tracking-wider" style={{ fontFamily: 'var(--font-display)' }}>
+        <span style={{ fontSize: '1.4rem' }}>{String(data.icon)}</span>
+        <span className="font-bold text-base uppercase tracking-wider" style={{ fontFamily: 'var(--font-display)' }}>
           {String(data.label)}
         </span>
       </div>
       {data.detail ? (
-        <p className="text-[12px] mt-1 leading-relaxed" style={{ color: 'rgba(255,255,255,0.65)', maxWidth: 240 }}>
+        <p className="text-[14px] mt-1 leading-relaxed" style={{ color: 'rgba(255,255,255,0.65)', maxWidth: 280 }}>
           {String(data.detail)}
         </p>
       ) : null}
       {data.badge ? (
-        <div className="mt-2 inline-block px-2 py-0.5 rounded-full text-[11px] font-bold uppercase" style={{
+        <div className="mt-2 inline-block px-2 py-0.5 rounded-full text-[13px] font-bold uppercase" style={{
           background: (data.badgeBg as string) ?? 'rgba(255,255,255,0.1)',
           color: (data.badgeColor as string) ?? '#fff',
         }}>
@@ -1240,6 +1240,539 @@ function S11c_CachedEditInternals() {
   )
 }
 
+// ─── KV Cache Explainer (Slide 12) ─────────────────────────────────────────
+
+const KV_TOKENS = [
+  { word: 'Time',   sup: '1' },
+  { word: 'flies',  sup: '2' },
+  { word: 'fast',   sup: '3' },
+  { word: 'when',   sup: '4' },
+  { word: 'you',    sup: '5' },
+  { word: 'are',    sup: '6' },
+  { word: 'having', sup: '7' },
+  { word: 'fun',    sup: '8' },
+] as const
+
+function PipelineBanner({ act }: { act: number }) {
+  const stages: { label: string; sub: string; color: string; id: string }[] = [
+    { label: 'token', sub: 'embedding x', color: '#a78bfa', id: 'token' },
+    { label: '× Wq', sub: '', color: '#86efac', id: 'wq' },
+    { label: '× Wk', sub: '', color: '#22d3ee', id: 'wk' },
+    { label: '× Wv', sub: '', color: '#f59e0b', id: 'wv' },
+    { label: 'q', sub: 'query', color: '#86efac', id: 'q' },
+    { label: 'k', sub: 'key', color: '#22d3ee', id: 'k' },
+    { label: 'v', sub: 'value', color: '#f59e0b', id: 'v' },
+    { label: 'q·k₁, q·k₂, …', sub: 'attention scores', color: '#fcd34d', id: 'scores' },
+    { label: 'softmax × V', sub: 'weighted sum', color: '#fcd34d', id: 'output' },
+  ]
+
+  function pulseClass(id: string) {
+    if (act === 2 && (id === 'wk' || id === 'wv')) return 'kv-pulse-red'
+    if (act === 3 && (id === 'k' || id === 'v')) return 'kv-pulse-indigo'
+    if (act === 3 && id === 'wq') return 'kv-pulse-green'
+    return ''
+  }
+
+  return (
+    <div className="kv-stage" style={{ animationDelay: '0.2s' }}>
+      <div
+        className="flex items-center justify-center gap-2 flex-wrap"
+        style={{
+          padding: '1.2vh 1.5vw',
+          background: 'rgba(255,255,255,0.025)',
+          border: '1px solid rgba(255,255,255,0.08)',
+          borderRadius: '12px',
+        }}
+      >
+        {stages.map((s, i) => {
+          const showArrowBefore = i === 1 || i === 4 || i === 7 || i === 8
+          return (
+            <div key={s.id} className="flex items-center gap-2">
+              {showArrowBefore && (
+                <span style={{ color: 'var(--dim)', fontSize: '1.4vw', margin: '0 0.2vw' }}>→</span>
+              )}
+              {i >= 1 && i <= 3 ? (
+                <div
+                  className={pulseClass(s.id)}
+                  style={{
+                    padding: '0.4vh 0.6vw',
+                    background: `${s.color}15`,
+                    border: `1px solid ${s.color}50`,
+                    borderRadius: '6px',
+                    textAlign: 'center',
+                  }}
+                >
+                  <div className="mono" style={{ color: s.color, fontSize: '1.1vw', fontWeight: 600 }}>
+                    {s.label}
+                  </div>
+                </div>
+              ) : i >= 4 && i <= 6 ? (
+                <div
+                  className={pulseClass(s.id)}
+                  style={{
+                    padding: '0.4vh 0.6vw',
+                    background: `${s.color}15`,
+                    border: `1px solid ${s.color}50`,
+                    borderRadius: '6px',
+                    textAlign: 'center',
+                  }}
+                >
+                  <div className="mono" style={{ color: s.color, fontSize: '1.15vw', fontWeight: 700 }}>
+                    {s.label}
+                  </div>
+                  <div style={{ color: 'var(--dim)', fontSize: '0.7vw' }}>{s.sub}</div>
+                </div>
+              ) : (
+                <div
+                  style={{
+                    padding: '0.4vh 0.6vw',
+                    background: i === 0 ? 'rgba(167,139,250,0.1)' : `${s.color}12`,
+                    border: `1px solid ${i === 0 ? 'rgba(167,139,250,0.3)' : s.color + '40'}`,
+                    borderRadius: '6px',
+                    textAlign: 'center',
+                  }}
+                >
+                  <div className="mono" style={{ color: s.color, fontSize: i >= 7 ? '1.0vw' : '1.1vw', fontWeight: 600 }}>
+                    {s.label}
+                  </div>
+                  {s.sub && <div style={{ color: 'var(--dim)', fontSize: '0.65vw' }}>{s.sub}</div>}
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+      <p className="kv-narr" style={{
+        animationDelay: '1.0s',
+        textAlign: 'center',
+        fontSize: '1.1vw',
+        color: '#fcd34d',
+        marginTop: '0.6vh',
+      }}>
+        For <em>every new token</em>, this runs against <em>all past tokens</em>.
+        Under <span style={{ color: '#a78bfa' }}>causal masking</span>, each token only sees the past — so
+        the <span style={{ color: '#22d3ee' }}>keys</span> and <span style={{ color: '#f59e0b' }}>values</span> of past tokens never change. Why recompute them?
+      </p>
+    </div>
+  )
+}
+
+function KVAct2_WithoutCache({ baseDelay }: { baseDelay: number }) {
+  const d = baseDelay
+  return (
+    <div className="kv-stage" style={{ animationDelay: `${d}s` }}>
+      <p className="mono uppercase kv-narr" style={{
+        fontSize: '1.3vw',
+        color: '#ef4444',
+        letterSpacing: '0.12em',
+        marginBottom: '0.8vh',
+        animationDelay: `${d}s`,
+      }}>
+        ✗ Without KV cache — recompute all K,V each step
+      </p>
+
+      {/* Rhetorical echo from primer header */}
+      <p className="kv-narr" style={{
+        animationDelay: `${d + 0.15}s`,
+        fontSize: '0.8vw',
+        color: 'rgba(252,211,77,0.6)',
+        fontStyle: 'italic',
+        textAlign: 'center',
+        marginBottom: '0.5vh',
+      }}>
+        k⁽¹⁾…k⁽⁷⁾ haven't changed — why recompute them?
+      </p>
+
+      <div className="flex justify-center gap-1.5" style={{ flexWrap: 'nowrap' }}>
+        {KV_TOKENS.map((tok, i) => {
+          const isNew = i === KV_TOKENS.length - 1
+          const computeDelay = d + 0.3 + i * 0.18
+          return (
+            <div
+              key={tok.sup}
+              className="kv-compute"
+              style={{
+                animationDelay: `${computeDelay}s`,
+                textAlign: 'center',
+                minWidth: '5.5vw',
+                padding: '0.5vh 0.35vw',
+                border: `1px solid ${isNew ? 'rgba(134,239,172,0.4)' : 'rgba(239,68,68,0.3)'}`,
+                borderRadius: '8px',
+                background: isNew ? 'rgba(134,239,172,0.05)' : 'rgba(239,68,68,0.04)',
+                opacity: isNew ? 1 : 0.55,
+              }}
+            >
+              <div style={{ color: isNew ? '#86efac' : '#a78bfa', fontSize: '1.15vw' }}>
+                "{tok.word}"
+              </div>
+              <div style={{
+                color: isNew ? '#86efac' : '#ef4444',
+                fontSize: '0.8vw',
+                margin: '0.2vh 0',
+              }}>
+                {isNew ? '↓W_q ↓W_k ↓W_v' : '↓W_k ↓W_v'}
+                {!isNew && <span style={{ color: '#fca5a5', fontSize: '0.85em', marginLeft: '0.2vw' }}>×2</span>}
+              </div>
+              <div className="kv-wasted" style={{
+                animationDelay: `${computeDelay + 0.3}s`,
+                color: isNew ? '#86efac' : '#fca5a5',
+                fontSize: '0.75vw',
+              }}>
+                {isNew ? '✓ needed' : `♻ redo · step ${i + 1}`}
+              </div>
+              <div className="mono" style={{ fontSize: '0.7vw', marginTop: '0.2vh', color: 'rgba(255,255,255,0.6)' }}>
+                {isNew ? `q⁽${tok.sup}⁾ k⁽${tok.sup}⁾ v⁽${tok.sup}⁾` : `k⁽${tok.sup}⁾ v⁽${tok.sup}⁾`}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Identity callout */}
+      <p className="kv-narr" style={{
+        animationDelay: `${d + 2.0}s`,
+        fontSize: '0.8vw',
+        color: '#fcd34d',
+        textAlign: 'center',
+        marginTop: '0.5vh',
+        fontStyle: 'italic',
+      }}>
+        k⁽¹⁾ at step 8 ≡ k⁽¹⁾ at step 1 — same input, same weights, same output.
+      </p>
+
+      {/* Attention scores row */}
+      <div className="kv-narr" style={{
+        animationDelay: `${d + 2.2}s`,
+        textAlign: 'center',
+        marginTop: '0.4vh',
+      }}>
+        <div style={{ fontSize: '0.7vw', color: 'var(--dim)', marginBottom: '0.15vh' }}>
+          attention scores (need all 8 keys):
+        </div>
+        <div className="flex justify-center gap-2 mono" style={{
+          fontSize: '0.85vw',
+          color: '#fcd34d',
+        }}>
+          {KV_TOKENS.map((tok) => (
+            <span key={tok.sup}>q⁽⁸⁾·k⁽{tok.sup}⁾</span>
+          ))}
+        </div>
+      </div>
+
+      {/* Cost counter */}
+      <div className="kv-cost" style={{
+        animationDelay: `${d + 2.8}s`,
+        marginTop: '0.6vh',
+        padding: '0.5vh 1.2vw',
+        background: 'rgba(239,68,68,0.08)',
+        border: '1px solid rgba(239,68,68,0.3)',
+        borderRadius: '8px',
+        textAlign: 'center',
+      }}>
+        <span className="mono" style={{ color: '#fca5a5', fontSize: '1.15vw' }}>
+          Cost: 1 × W<sub>q</sub> + 8 × W<sub>k</sub> + 8 × W<sub>v</sub> ={' '}
+          <strong style={{ color: '#ef4444' }}>17 matrix multiplications</strong>
+        </span>
+        <div style={{ color: '#ef4444', fontSize: '0.85vw', marginTop: '0.2vh' }}>
+          7 tokens × 2 ops = 14 redundant matmuls — tokens 1–7 were already computed in previous steps!
+        </div>
+        <div style={{ color: 'rgba(239,68,68,0.5)', fontSize: '0.7vw', marginTop: '0.15vh' }}>
+          At step 8: 14 wasted. Over 200 tokens: ~40,000 wasted matmuls per layer.
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function KVAct3_WithCache({ baseDelay }: { baseDelay: number }) {
+  const d = baseDelay
+  return (
+    <div>
+      {/* KV Cache box */}
+      <div className="kv-cache-in" style={{ animationDelay: `${d}s` }}>
+        <div style={{
+          padding: '1vh 1.2vw',
+          background: 'rgba(129,140,248,0.06)',
+          border: '1.5px solid rgba(129,140,248,0.4)',
+          borderRadius: '12px',
+          textAlign: 'center',
+        }}>
+          <p className="mono" style={{
+            fontSize: '1.0vw',
+            color: '#818cf8',
+            fontWeight: 700,
+            marginBottom: '0.5vh',
+          }}>
+            KV Cache <span style={{ fontWeight: 400, color: 'var(--dim)', fontSize: '0.8vw' }}>
+              (stored from previous generation steps)
+            </span>
+          </p>
+          <div className="flex justify-center gap-1.5 flex-wrap">
+            {KV_TOKENS.slice(0, -1).map((tok, i) => (
+              <span
+                key={tok.sup}
+                className="kv-stage"
+                style={{
+                  animationDelay: `${d + 0.4 + i * 0.1}s`,
+                  padding: '0.3vh 0.6vw',
+                  border: '1px solid rgba(129,140,248,0.3)',
+                  borderRadius: '6px',
+                  background: 'rgba(129,140,248,0.08)',
+                  fontSize: '0.7vw',
+                  fontFamily: 'var(--font-mono)',
+                }}
+              >
+                k⁽{tok.sup}⁾ v⁽{tok.sup}⁾ <span style={{ color: '#a78bfa' }}>"{tok.word}"</span>
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Computation: cache lookup + fresh compute */}
+      <div className="flex justify-center items-center gap-8" style={{ marginTop: '1.2vh' }}>
+        <div className="kv-narr" style={{
+          animationDelay: `${d + 1.2}s`,
+          textAlign: 'center',
+          fontSize: '0.85vw',
+          color: '#818cf8',
+        }}>
+          ↓ look up from cache<br />
+          <span style={{ color: 'var(--dim)', fontSize: '0.7vw' }}>0 matrix multiplications</span>
+        </div>
+
+        <div className="kv-stage" style={{
+          animationDelay: `${d + 1.4}s`,
+          padding: '0.8vh 1.2vw',
+          border: '1.5px solid rgba(134,239,172,0.4)',
+          borderRadius: '10px',
+          background: 'rgba(134,239,172,0.06)',
+          textAlign: 'center',
+        }}>
+          <div style={{ color: '#86efac', fontSize: '1.1vw', fontWeight: 700 }}>
+            "fun" x⁽⁸⁾
+          </div>
+          <div style={{ color: '#86efac', fontSize: '0.75vw', marginTop: '0.3vh' }}>
+            ↓W<sub>q</sub> ↓W<sub>k</sub> ↓W<sub>v</sub>
+          </div>
+          <div className="mono" style={{ fontSize: '0.7vw', marginTop: '0.3vh', color: 'rgba(255,255,255,0.7)' }}>
+            q⁽⁸⁾ k⁽⁸⁾ v⁽⁸⁾
+          </div>
+          <div style={{ color: '#86efac', fontSize: '0.6vw', marginTop: '0.2vh' }}>
+            → k⁽⁸⁾, v⁽⁸⁾ added to cache
+          </div>
+        </div>
+      </div>
+
+      {/* Attention scores */}
+      <div className="kv-narr flex justify-center gap-2 mono" style={{
+        animationDelay: `${d + 2.0}s`,
+        fontSize: '0.75vw',
+        color: '#fcd34d',
+        marginTop: '0.6vh',
+      }}>
+        {KV_TOKENS.map((tok) => (
+          <span key={tok.sup}>q⁽⁸⁾·k⁽{tok.sup}⁾</span>
+        ))}
+      </div>
+
+      <div className="kv-narr mono" style={{
+        animationDelay: `${d + 2.4}s`,
+        textAlign: 'center',
+        fontSize: '0.75vw',
+        color: 'var(--dim)',
+        marginTop: '0.3vh',
+      }}>
+        Same attention scores — identical output
+      </div>
+
+      {/* Cost counter */}
+      <div className="kv-cost" style={{
+        animationDelay: `${d + 2.8}s`,
+        marginTop: '0.5vh',
+        padding: '0.5vh 1.2vw',
+        background: 'rgba(16,185,129,0.08)',
+        border: '1px solid rgba(16,185,129,0.3)',
+        borderRadius: '8px',
+        textAlign: 'center',
+      }}>
+        <span className="mono" style={{ color: '#86efac', fontSize: '1.0vw' }}>
+          Cost: 1 × W<sub>q</sub> + 1 × W<sub>k</sub> + 1 × W<sub>v</sub> ={' '}
+          <strong style={{ color: '#10b981' }}>3 matrix multiplications</strong>
+        </span>
+        <div style={{ color: '#10b981', fontSize: '0.75vw', marginTop: '0.2vh' }}>
+          87.5% less compute. With 200K tokens the savings are astronomical.
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function S12_KVCacheExplainer() {
+  const [act, setAct] = useState(1)
+  const timerRefs = useRef<ReturnType<typeof setTimeout>[]>([])
+
+  useEffect(() => {
+    timerRefs.current.forEach(clearTimeout)
+    timerRefs.current = []
+
+    timerRefs.current.push(setTimeout(() => setAct(2), 3_800))
+    timerRefs.current.push(setTimeout(() => setAct(3), 8_800))
+
+    return () => {
+      timerRefs.current.forEach(clearTimeout)
+      timerRefs.current = []
+    }
+  }, [])
+
+  const t = {
+    tokens:    2.0,
+    act2:      3.8,
+    act3:      8.8,
+    takeaway: 13.8,
+  }
+
+  return (
+    <div className="flex flex-col items-center" style={{ width: '95vw', gap: '0.4vh' }}>
+      {/* Title */}
+      <h2 className="slide-h2" style={{ fontSize: '3.0vw', marginBottom: '0.2vh' }}>
+        <span style={{
+          fontFamily: 'var(--font-mono)',
+          fontSize: '0.55em',
+          letterSpacing: '0.14em',
+          color: '#818cf8',
+          textTransform: 'uppercase',
+          marginRight: '0.8em',
+          verticalAlign: 'middle',
+        }}>
+          Primer
+        </span>
+        What is <span style={{ color: '#22d3ee' }}>KV Cache</span>?
+      </h2>
+
+      {/* Pipeline banner */}
+      <PipelineBanner act={act} />
+
+      {/* Act 1: Token embeddings */}
+      <div className="flex justify-center gap-2" style={{ marginTop: '0.5vh' }}>
+        {KV_TOKENS.map((tok, i) => {
+          const isNew = i === KV_TOKENS.length - 1
+          return (
+            <div
+              key={tok.sup}
+              className="kv-token"
+              style={{
+                animationDelay: `${t.tokens + i * 0.12}s`,
+                textAlign: 'center',
+                minWidth: '5vw',
+              }}
+            >
+              <div style={{
+                color: isNew ? '#86efac' : '#a78bfa',
+                fontSize: '0.9vw',
+                marginBottom: '0.15vh',
+              }}>
+                "{tok.word}"
+                {isNew && (
+                  <span style={{ fontSize: '0.6vw', color: '#fcd34d', marginLeft: '0.3vw' }}>
+                    ← new
+                  </span>
+                )}
+              </div>
+              <div style={{
+                padding: '0.25vh 0.5vw',
+                background: isNew ? 'rgba(134,239,172,0.1)' : 'rgba(129,140,248,0.1)',
+                border: `1px solid ${isNew ? 'rgba(134,239,172,0.35)' : 'rgba(129,140,248,0.25)'}`,
+                borderRadius: '5px',
+                fontSize: '0.7vw',
+                fontFamily: 'var(--font-mono)',
+                color: 'rgba(255,255,255,0.7)',
+              }}>
+                x⁽{tok.sup}⁾
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Subtitle */}
+      <p className="kv-narr" style={{
+        animationDelay: `${t.tokens + 1.2}s`,
+        fontSize: '1.0vw',
+        color: 'var(--dim)',
+        textAlign: 'center',
+      }}>
+        To predict the next word, compute <span style={{ color: '#fcd34d' }}>attention scores</span> between
+        "<span style={{ color: '#86efac' }}>fun</span>" and every previous token.
+      </p>
+
+      {/* Two-column layout: Act 2 (left) and Act 3 (right) */}
+      <div className="flex gap-4 w-full" style={{ marginTop: '0.5vh' }}>
+        {/* Act 2: Without cache */}
+        <div
+          className="glass-card flex flex-col"
+          style={{ flex: 1, padding: '1.2vh 1vw' }}
+        >
+          <KVAct2_WithoutCache baseDelay={t.act2} />
+        </div>
+
+        {/* Act 3: With cache */}
+        <div
+          className="glass-card flex flex-col"
+          style={{ flex: 1, padding: '1.2vh 1vw' }}
+        >
+          <div className="kv-stage" style={{ animationDelay: `${t.act3}s` }}>
+            <p className="mono uppercase kv-narr" style={{
+              fontSize: '1.15vw',
+              color: '#10b981',
+              letterSpacing: '0.12em',
+              marginBottom: '0.8vh',
+              animationDelay: `${t.act3}s`,
+            }}>
+              ✓ With KV cache — store and reuse
+            </p>
+          </div>
+          <KVAct3_WithCache baseDelay={t.act3 + 0.3} />
+        </div>
+      </div>
+
+      {/* Act 4: Takeaway */}
+      <div
+        className="kv-narr"
+        style={{
+          animationDelay: `${t.takeaway}s`,
+          marginTop: '0.5vh',
+          padding: '1vh 1.5vw',
+          borderRadius: '10px',
+          background: 'linear-gradient(135deg, rgba(34,211,238,0.06) 0%, rgba(129,140,248,0.06) 100%)',
+          border: '1px solid rgba(34,211,238,0.3)',
+          textAlign: 'center',
+          maxWidth: '85vw',
+        }}
+      >
+        <p className="mono uppercase" style={{
+          fontSize: '0.85vw',
+          color: '#67e8f9',
+          letterSpacing: '0.12em',
+          marginBottom: '0.3vh',
+        }}>
+          The trade-off
+        </p>
+        <p style={{ fontSize: '1.0vw', color: 'var(--fg)', lineHeight: 1.55 }}>
+          KV cache trades <span style={{ color: '#ef4444', fontWeight: 700 }}>memory</span> for{' '}
+          <span style={{ color: '#86efac', fontWeight: 700 }}>speed</span>.
+          Every past token's k, v stays in GPU memory.
+          For a 200K-token conversation, that's gigabytes of cached tensors.
+          <br />
+          <span style={{ color: '#fcd34d' }}>
+            Next → how Claude Code surgically edits this cache to free memory without recomputing.
+          </span>
+        </p>
+      </div>
+    </div>
+  )
+}
+
 // ─── Slide 13b: Cache Edit Pipeline — Client Memory → KV Cache ───────────────
 //
 // Animates the three-layer journey of a cached tool_result eviction:
@@ -1249,6 +1782,482 @@ function S11c_CachedEditInternals() {
 // Then visualises the consequence at decode time: the new token's Q can only
 // attend to surviving K,V positions. Animation is deliberately slow and paced
 // so each stage can be read before the next appears (~13s total).
+
+// ─── KV Cache Depth (Slide 13) ─────────────────────────────────────────────
+
+const PROMPT_TOKENS = ['Time', 'flies', 'fast', 'when', 'you'] as const
+const DECODE_TOKENS = ['are', 'having'] as const
+
+function PrefillDiagram({ baseDelay }: { baseDelay: number }) {
+  const d = baseDelay
+  const n = PROMPT_TOKENS.length
+  const gap = 70
+  const x0 = 40
+  const totalW = x0 + (n - 1) * gap + x0
+
+  const attnLines: { x1: number; y1: number; x2: number; y2: number; col: number; row: number; opacity: number }[] = []
+  for (let j = 0; j < n; j++) {
+    for (let i = 0; i <= j; i++) {
+      attnLines.push({
+        x1: x0 + j * gap, y1: 95,
+        x2: x0 + i * gap, y2: 18,
+        col: j,
+        row: i,
+        opacity: 0.2 + 0.5 * (1 - (j - i) / Math.max(j, 1)),
+      })
+    }
+  }
+
+  return (
+    <div>
+      <p className="mono uppercase kv-narr" style={{
+        animationDelay: `${d}s`,
+        fontSize: '1.25vw',
+        color: '#818cf8',
+        letterSpacing: '0.12em',
+        marginBottom: '0.6vh',
+      }}>
+        Phase 1 · Prefill — process entire prompt at once
+      </p>
+
+      <div className="kv-stage" style={{ animationDelay: `${d + 0.3}s` }}>
+        <svg
+          viewBox={`0 0 ${totalW} 120`}
+          style={{ width: '100%', height: 'auto', maxHeight: '22vh' }}
+        >
+          {PROMPT_TOKENS.map((tok, i) => (
+            <g key={`k-${i}`}>
+              <circle
+                cx={x0 + i * gap} cy={18} r={5}
+                fill="#22d3ee"
+                className="kv-token"
+                style={{ animationDelay: `${d + 0.5 + i * 0.1}s` }}
+              />
+              <text
+                x={x0 + i * gap} y={10}
+                fill="#22d3ee" fontSize="10" textAnchor="middle"
+                className="kv-token"
+                style={{ animationDelay: `${d + 0.5 + i * 0.1}s` }}
+              >
+                k{String.fromCharCode(0x2080 + i + 1)}
+              </text>
+            </g>
+          ))}
+
+          {PROMPT_TOKENS.map((tok, i) => (
+            <g key={`q-${i}`}>
+              <circle
+                cx={x0 + i * gap} cy={95} r={5}
+                fill="#86efac"
+                className="kv-token"
+                style={{ animationDelay: `${d + 0.5 + i * 0.1}s` }}
+              />
+              <text
+                x={x0 + i * gap} y={112}
+                fill="#86efac" fontSize="10" textAnchor="middle"
+                className="kv-token"
+                style={{ animationDelay: `${d + 0.5 + i * 0.1}s` }}
+              >
+                q{String.fromCharCode(0x2080 + i + 1)}
+              </text>
+            </g>
+          ))}
+
+          {PROMPT_TOKENS.map((tok, i) => (
+            <text
+              key={`lbl-${i}`}
+              x={x0 + i * gap} y={-2}
+              fill="#a78bfa" fontSize="9" textAnchor="middle"
+              className="kv-token"
+              style={{ animationDelay: `${d + 0.5 + i * 0.1}s` }}
+            >
+              "{tok}"
+            </text>
+          ))}
+
+          {attnLines.map((line, idx) => (
+            <line
+              key={idx}
+              x1={line.x1} y1={line.y1}
+              x2={line.x2} y2={line.y2}
+              stroke="#fcd34d"
+              strokeWidth={1.5}
+              className="kv-attn"
+              style={{
+                animationDelay: `${d + 1.4 + line.col * 0.7 + line.row * 0.06}s`,
+                ['--attn-opacity' as string]: line.opacity,
+              }}
+            />
+          ))}
+        </svg>
+      </div>
+
+      <p className="kv-narr" style={{
+        animationDelay: `${d + 5.2}s`,
+        fontSize: '1.05vw',
+        color: 'var(--dim)',
+        textAlign: 'center',
+        marginTop: '0.3vh',
+      }}>
+        <span style={{ color: '#fcd34d' }}>Causal attention:</span> each token attends only to itself and past.
+        All K,V computed in parallel and stored in cache.
+      </p>
+
+      <div className="kv-cache-in" style={{
+        animationDelay: `${d + 5.8}s`,
+        marginTop: '0.6vh',
+        padding: '0.5vh 0.8vw',
+        background: 'rgba(129,140,248,0.06)',
+        border: '1px solid rgba(129,140,248,0.3)',
+        borderRadius: '8px',
+        textAlign: 'center',
+      }}>
+        <span className="mono" style={{ fontSize: '0.85vw', color: '#818cf8', fontWeight: 600, marginRight: '0.5vw' }}>
+          Cache:
+        </span>
+        {PROMPT_TOKENS.map((tok, i) => (
+          <span
+            key={i}
+            className="kv-stage"
+            style={{
+              animationDelay: `${d + 6.0 + i * 0.1}s`,
+              display: 'inline-block',
+              padding: '0.15vh 0.4vw',
+              margin: '0 0.15vw',
+              border: '1px solid rgba(129,140,248,0.3)',
+              borderRadius: '4px',
+              background: 'rgba(129,140,248,0.08)',
+              fontSize: '0.75vw',
+              fontFamily: 'var(--font-mono)',
+              color: 'rgba(255,255,255,0.7)',
+            }}
+          >
+            k{String.fromCharCode(0x2080 + i + 1)},v{String.fromCharCode(0x2080 + i + 1)}
+          </span>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function DecodeDiagram({ baseDelay }: { baseDelay: number }) {
+  const d = baseDelay
+  const gap = 55
+  const x0 = 30
+
+  const steps = DECODE_TOKENS.map((tok, stepIdx) => {
+    const totalTokens = PROMPT_TOKENS.length + stepIdx + 1
+    const newIdx = totalTokens - 1
+    const totalW = x0 + (totalTokens - 1) * gap + x0
+
+    const arcs: { kx: number; ky: number; opacity: number; idx: number }[] = []
+    for (let i = 0; i < totalTokens; i++) {
+      arcs.push({
+        kx: x0 + i * gap,
+        ky: 15,
+        opacity: 0.2 + 0.6 * (1 - (newIdx - i) / newIdx),
+        idx: i,
+      })
+    }
+
+    return { tok, totalTokens, newIdx, totalW, arcs, stepIdx }
+  })
+
+  return (
+    <div>
+      <p className="mono uppercase kv-narr" style={{
+        animationDelay: `${d}s`,
+        fontSize: '1.25vw',
+        color: '#86efac',
+        letterSpacing: '0.12em',
+        marginBottom: '0.6vh',
+      }}>
+        Phase 2 · Decode — generate one token at a time
+      </p>
+
+      {steps.map((step, si) => {
+        const stepD = d + 0.4 + si * 3.5
+        return (
+          <div key={si} className="kv-stage" style={{
+            animationDelay: `${stepD}s`,
+            marginBottom: si === 0 ? '1vh' : 0,
+          }}>
+            <p className="kv-narr mono" style={{
+              animationDelay: `${stepD}s`,
+              fontSize: '0.95vw',
+              color: '#86efac',
+              marginBottom: '0.3vh',
+            }}>
+              Step {si + 1}: generate "{step.tok}" (t={step.totalTokens})
+            </p>
+
+            <svg
+              viewBox={`0 0 ${step.totalW} 100`}
+              style={{ width: '100%', height: 'auto', maxHeight: '14vh' }}
+            >
+              {Array.from({ length: step.totalTokens - 1 }).map((_, i) => (
+                <circle
+                  key={`ck-${i}`}
+                  cx={x0 + i * gap} cy={15} r={4}
+                  fill="#818cf8" opacity={0.5}
+                />
+              ))}
+
+              <circle
+                cx={x0 + step.newIdx * gap} cy={15} r={5}
+                fill="#86efac"
+                className="kv-token"
+                style={{ animationDelay: `${stepD + 0.3}s` }}
+              />
+              <text
+                x={x0 + step.newIdx * gap} y={7}
+                fill="#86efac" fontSize="9" textAnchor="middle"
+                className="kv-token"
+                style={{ animationDelay: `${stepD + 0.3}s` }}
+              >
+                k{String.fromCharCode(0x2080 + step.totalTokens)}
+              </text>
+
+              <circle
+                cx={x0 + step.newIdx * gap} cy={85} r={6}
+                fill="#86efac"
+                className="kv-token"
+                style={{ animationDelay: `${stepD + 0.3}s` }}
+              />
+              <text
+                x={x0 + step.newIdx * gap + 14} y={89}
+                fill="#86efac" fontSize="10" textAnchor="start"
+                className="kv-token"
+                style={{ animationDelay: `${stepD + 0.3}s` }}
+              >
+                q{String.fromCharCode(0x2080 + step.totalTokens)} "{step.tok}"
+              </text>
+
+              <text
+                x={x0 + (step.totalTokens - 2) * gap / 2} y={28}
+                fill="#818cf8" fontSize="8.5" textAnchor="middle" fontStyle="italic"
+                className="kv-narr"
+                style={{ animationDelay: `${stepD + 0.5}s` }}
+              >
+                ← from cache (0 recompute)
+              </text>
+
+              {step.arcs.map((arc, ai) => {
+                const qxPos = x0 + step.newIdx * gap
+                const midY = 50 + (step.newIdx - arc.idx) * 3
+                return (
+                  <path
+                    key={ai}
+                    d={arc.kx === qxPos
+                      ? `M${qxPos},85 L${qxPos},15`
+                      : `M${qxPos},85 Q${(qxPos + arc.kx) / 2},${midY} ${arc.kx},${arc.ky}`
+                    }
+                    fill="none"
+                    stroke="#fcd34d"
+                    strokeWidth={1.5}
+                    className="kv-attn"
+                    style={{
+                      animationDelay: `${stepD + 0.6 + ai * 0.12}s`,
+                      ['--attn-opacity' as string]: arc.opacity,
+                    }}
+                  />
+                )
+              })}
+            </svg>
+
+            <div style={{
+              textAlign: 'center',
+              fontSize: '0.75vw',
+              fontFamily: 'var(--font-mono)',
+              marginTop: '0.2vh',
+            }}>
+              <span style={{ color: '#818cf8', opacity: 0.6 }}>Cache: </span>
+              <span style={{ color: '#818cf8', opacity: 0.5 }}>
+                {Array.from({ length: step.totalTokens - 1 }).map((_, i) =>
+                  `[k${String.fromCharCode(0x2080 + i + 1)},v${String.fromCharCode(0x2080 + i + 1)}] `
+                )}
+              </span>
+              <span
+                className="kv-append"
+                style={{
+                  animationDelay: `${stepD + 0.6 + step.totalTokens * 0.12 + 0.3}s`,
+                  color: '#86efac',
+                  fontWeight: 700,
+                }}
+              >
+                + [k{String.fromCharCode(0x2080 + step.totalTokens)},v{String.fromCharCode(0x2080 + step.totalTokens)}]
+              </span>
+            </div>
+          </div>
+        )
+      })}
+
+      <p className="kv-narr" style={{
+        animationDelay: `${d + 7.4}s`,
+        fontSize: '1.0vw',
+        color: '#fcd34d',
+        textAlign: 'center',
+        marginTop: '0.4vh',
+      }}>
+        Each step: one new token → fan of arcs to all cached keys → cache grows by one
+      </p>
+    </div>
+  )
+}
+
+function CostComparison({ baseDelay }: { baseDelay: number }) {
+  const d = baseDelay
+  const totalSteps = PROMPT_TOKENS.length + DECODE_TOKENS.length
+
+  return (
+    <div className="kv-stage" style={{ animationDelay: `${d}s` }}>
+      <div className="flex gap-6 justify-center" style={{ marginTop: '0.3vh' }}>
+        <div style={{ flex: 1, textAlign: 'center' }}>
+          <p className="mono" style={{ fontSize: '1.1vw', color: '#ef4444', fontWeight: 700, marginBottom: '0.4vh' }}>
+            K,V projection without cache: O(n²)
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', alignItems: 'flex-start', padding: '0 1vw' }}>
+            {Array.from({ length: totalSteps }).map((_, i) => (
+              <div
+                key={i}
+                className="kv-bar-grow"
+                style={{
+                  animationDelay: `${d + 0.3 + i * 0.18}s`,
+                  height: '0.7vh',
+                  width: `${((i + 1) / totalSteps) * 100}%`,
+                  background: '#ef4444',
+                  borderRadius: '2px',
+                  opacity: 0.85,
+                }}
+              />
+            ))}
+          </div>
+          <p className="kv-narr mono" style={{
+            animationDelay: `${d + 1.8}s`,
+            fontSize: '0.8vw',
+            color: '#fca5a5',
+            marginTop: '0.3vh',
+          }}>
+            Each step recomputes ALL W<sub>k</sub>·x, W<sub>v</sub>·x
+            <br />
+            Total: 1+2+…+n = n(n+1)/2
+          </p>
+        </div>
+
+        <div style={{ flex: 1, textAlign: 'center' }}>
+          <p className="mono" style={{ fontSize: '1.1vw', color: '#86efac', fontWeight: 700, marginBottom: '0.4vh' }}>
+            K,V projection with cache: O(n)
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', alignItems: 'flex-start', padding: '0 1vw' }}>
+            <div
+              className="kv-bar-grow"
+              style={{
+                animationDelay: `${d + 0.3}s`,
+                height: '0.7vh',
+                width: `${(PROMPT_TOKENS.length / totalSteps) * 100}%`,
+                background: 'linear-gradient(90deg, #818cf8 0%, #22d3ee 100%)',
+                borderRadius: '2px',
+                opacity: 0.85,
+              }}
+            />
+            {DECODE_TOKENS.map((_, i) => (
+              <div
+                key={i}
+                className="kv-bar-grow"
+                style={{
+                  animationDelay: `${d + 0.48 + i * 0.18}s`,
+                  height: '0.7vh',
+                  width: `${(1 / totalSteps) * 100}%`,
+                  background: '#86efac',
+                  borderRadius: '2px',
+                  opacity: 0.85,
+                }}
+              />
+            ))}
+          </div>
+          <p className="kv-narr mono" style={{
+            animationDelay: `${d + 1.8}s`,
+            fontSize: '0.8vw',
+            color: '#86efac',
+            marginTop: '0.3vh',
+          }}>
+            Prefill once, then 1 new W<sub>k</sub>·x, W<sub>v</sub>·x per step
+            <br />
+            Total: n (one per step)
+          </p>
+        </div>
+      </div>
+
+      <div className="kv-narr" style={{
+        animationDelay: `${d + 2.2}s`,
+        marginTop: '0.6vh',
+        padding: '0.5vh 1vw',
+        background: 'rgba(252,211,77,0.06)',
+        border: '1px solid rgba(252,211,77,0.25)',
+        borderRadius: '8px',
+        textAlign: 'center',
+      }}>
+        <span className="mono" style={{ fontSize: '1.0vw', color: '#fcd34d' }}>
+          ~5× faster measured on 200-token generation (Raschka, 2025).
+        </span>
+        <br />
+        <span style={{ fontSize: '0.85vw', color: 'var(--dim)' }}>
+          Note: attention itself (q·K, softmax·V) is still O(n²) — cache only eliminates redundant K,V projections.
+        </span>
+      </div>
+    </div>
+  )
+}
+
+function S13_KVCacheDepth() {
+  const t = {
+    prefill:    0.6,
+    decode:     7.0,
+    cost:      14.0,
+  }
+
+  return (
+    <div className="flex flex-col items-center" style={{ width: '95vw', gap: '0.3vh' }}>
+      <h2 className="slide-h2" style={{ fontSize: '2.8vw', marginBottom: '0.1vh' }}>
+        <span style={{
+          fontFamily: 'var(--font-mono)',
+          fontSize: '0.55em',
+          letterSpacing: '0.14em',
+          color: '#818cf8',
+          textTransform: 'uppercase',
+          marginRight: '0.8em',
+          verticalAlign: 'middle',
+        }}>
+          Primer · Deep Dive
+        </span>
+        How KV Cache Works <span style={{ color: '#22d3ee' }}>Step by Step</span>
+      </h2>
+      <p className="kv-narr" style={{
+        animationDelay: '0.3s',
+        fontSize: '1.2vw',
+        color: 'var(--dim)',
+        textAlign: 'center',
+        marginBottom: '0.3vh',
+      }}>
+        Watch how the cache grows and attention fans out during generation.
+      </p>
+
+      <div className="flex gap-4 w-full" style={{ flex: 1 }}>
+        <div className="glass-card flex flex-col" style={{ flex: 1, padding: '1vh 1vw' }}>
+          <PrefillDiagram baseDelay={t.prefill} />
+        </div>
+
+        <div className="glass-card flex flex-col" style={{ flex: 1, padding: '1vh 1vw' }}>
+          <DecodeDiagram baseDelay={t.decode} />
+        </div>
+      </div>
+
+      <div className="glass-card w-full" style={{ padding: '0.8vh 1.5vw' }}>
+        <CostComparison baseDelay={t.cost} />
+      </div>
+    </div>
+  )
+}
 
 function S11d_CacheEditPipeline() {
   // Base delay offsets (seconds). Keep them as variables so the pacing is
@@ -2535,11 +3544,11 @@ function S14_DecisionTree() {
     { id: 'e1', source: 'start', target: 'guard', animated: true, style: { stroke: '#3b82f6', strokeWidth: 2 } },
     { id: 'e2', source: 'guard', target: 'flags', animated: true, style: { stroke: '#64748b', strokeWidth: 2 } },
     { id: 'e3', source: 'flags', target: 'tokens', animated: true, style: { stroke: '#64748b', strokeWidth: 2 } },
-    { id: 'e3b', source: 'flags', target: 'skip', sourceHandle: 'right', animated: true, style: { stroke: '#64748b', strokeWidth: 1.5, strokeDasharray: '4 4' }, label: 'disabled', labelStyle: { fill: '#6b6b66', fontSize: 10 } },
-    { id: 'e4', source: 'tokens', target: 'cb', animated: true, style: { stroke: '#d97706', strokeWidth: 2 }, label: 'over threshold', labelStyle: { fill: '#d97706', fontSize: 10 } },
-    { id: 'e5a', source: 'cb', target: 'sm', animated: true, style: { stroke: '#f59e0b', strokeWidth: 2 }, label: 'healthy', labelStyle: { fill: '#f59e0b', fontSize: 10 } },
-    { id: 'e5b', source: 'cb', target: 'fc', animated: true, style: { stroke: '#f43f5e', strokeWidth: 2, strokeDasharray: '4 4' }, label: 'unhealthy', labelStyle: { fill: '#f43f5e', fontSize: 10 } },
-    { id: 'e6', source: 'sm', target: 'fc', sourceHandle: 'right', targetHandle: 'left', animated: true, style: { stroke: '#f59e0b', strokeWidth: 1.5, strokeDasharray: '6 4' }, label: 'fallback', labelStyle: { fill: '#6b6b66', fontSize: 10 } },
+    { id: 'e3b', source: 'flags', target: 'skip', sourceHandle: 'right', animated: true, style: { stroke: '#64748b', strokeWidth: 1.5, strokeDasharray: '4 4' }, label: 'disabled', labelStyle: { fill: '#6b6b66', fontSize: 13 } },
+    { id: 'e4', source: 'tokens', target: 'cb', animated: true, style: { stroke: '#d97706', strokeWidth: 2 }, label: 'over threshold', labelStyle: { fill: '#d97706', fontSize: 13 } },
+    { id: 'e5a', source: 'cb', target: 'sm', animated: true, style: { stroke: '#f59e0b', strokeWidth: 2 }, label: 'healthy', labelStyle: { fill: '#f59e0b', fontSize: 13 } },
+    { id: 'e5b', source: 'cb', target: 'fc', animated: true, style: { stroke: '#f43f5e', strokeWidth: 2, strokeDasharray: '4 4' }, label: 'unhealthy', labelStyle: { fill: '#f43f5e', fontSize: 13 } },
+    { id: 'e6', source: 'sm', target: 'fc', sourceHandle: 'right', targetHandle: 'left', animated: true, style: { stroke: '#f59e0b', strokeWidth: 1.5, strokeDasharray: '6 4' }, label: 'fallback', labelStyle: { fill: '#6b6b66', fontSize: 13 } },
   ], [])
 
   const detail = selectedNode ? DECISION_DETAILS[selectedNode] : null
@@ -3600,10 +4609,10 @@ function S15b_SessionMemoryDeep() {
             <p className="mono" style={{ fontSize: '0.93vw', color: '#c084fc', marginBottom: '0.7vh' }}>
               <span style={{ color: '#6b6b66' }}>after expand:</span> adjustIndexToPreserveAPIInvariants() <span
                 style={{ color: '#6b6b66', fontWeight: 400, cursor: 'pointer', textDecoration: 'underline', textDecorationStyle: 'dotted', textUnderlineOffset: '3px' }}
-                onClick={() => window.dispatchEvent(new CustomEvent('goToSlide', { detail: 30 }))}
+                onClick={() => window.dispatchEvent(new CustomEvent('goToSlide', { detail: 32 }))}
                 onMouseEnter={e => (e.currentTarget.style.color = '#c084fc')}
                 onMouseLeave={e => (e.currentTarget.style.color = '#6b6b66')}
-              >(more on slide 31)</span>
+              >(more on slide 32)</span>
             </p>
             <div className="flex flex-col" style={{ gap: '0.62vh' }}>
               <div
@@ -5255,6 +6264,8 @@ export const level2Slides = [
   S11_MicrocompactConcept,
   S12_MicrocompactDemo,
   S11b_TwoSubPaths,
+  S12_KVCacheExplainer,
+  S13_KVCacheDepth,
   S11d_CacheEditPipeline,
   S11c_CachedEditInternals,
   S13_AutoCompactConcept,
