@@ -1825,7 +1825,7 @@ function PrefillDiagram({ baseDelay }: { baseDelay: number }) {
           viewBox={`0 0 ${totalW} 120`}
           style={{ width: '100%', height: 'auto', maxHeight: '22vh' }}
         >
-          {PROMPT_TOKENS.map((tok, i) => (
+          {PROMPT_TOKENS.map((_tok, i) => (
             <g key={`k-${i}`}>
               <circle
                 cx={x0 + i * gap} cy={18} r={5}
@@ -1844,7 +1844,7 @@ function PrefillDiagram({ baseDelay }: { baseDelay: number }) {
             </g>
           ))}
 
-          {PROMPT_TOKENS.map((tok, i) => (
+          {PROMPT_TOKENS.map((_tok, i) => (
             <g key={`q-${i}`}>
               <circle
                 cx={x0 + i * gap} cy={95} r={5}
@@ -1915,7 +1915,7 @@ function PrefillDiagram({ baseDelay }: { baseDelay: number }) {
         <span className="mono" style={{ fontSize: '0.85vw', color: '#818cf8', fontWeight: 600, marginRight: '0.5vw' }}>
           Cache:
         </span>
-        {PROMPT_TOKENS.map((tok, i) => (
+        {PROMPT_TOKENS.map((_tok, i) => (
           <span
             key={i}
             className="kv-stage"
