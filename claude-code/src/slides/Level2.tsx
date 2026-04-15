@@ -1,5 +1,5 @@
 /**
- * Level 2 — Each Layer Deep Dive (Slides 11-20)
+ * Level 2 — Each Layer Deep Dive (Slides 10-27)
  * Detailed look at each compression layer with interactive ReactFlow diagrams.
  */
 
@@ -189,9 +189,9 @@ export function ClaudeForkSpinner({ size = '14vw' }: { size?: string }) {
   )
 }
 
-// ─── Slide 11: L1 Microcompact Concept ───────────────────────────────────────
+// ─── Slide 10: L1 Microcompact Concept ───────────────────────────────────────
 
-function S11_MicrocompactConcept() {
+function S10_MicrocompactConcept() {
   // Each entry is a line of the allowlist source — rendered with a staggered
   // line-by-line reveal so the code feels like it's being typed in.
   const codeLines: Array<{ code: ReactNode; comment?: string }> = [
@@ -339,9 +339,9 @@ function S11_MicrocompactConcept() {
   )
 }
 
-// ─── Slide 11b: L1 Two Sub-Paths (hover tabs → detail popup) ─────────────────
+// ─── Slide 12: L1 Two Sub-Paths (hover tabs → detail popup) ──────────────────
 
-function S11b_TwoSubPaths() {
+function S12_TwoSubPaths() {
   const [hovered, setHovered] = useState<'A' | 'B'>('A')
 
   const paths = {
@@ -656,9 +656,9 @@ function S11b_TwoSubPaths() {
   )
 }
 
-// ─── Slide 11c: L1 Cached Edit Internals — state flow + token pie ───────────
+// ─── Slide 16: L1 Cached Edit Internals — state flow + token pie ────────────
 
-function S11c_CachedEditInternals() {
+function S16_CachedEditInternals() {
   // Tracks which GrowthBook flow step is hovered, for subtle highlight.
   const [hoveredStep, setHoveredStep] = useState<number | null>(null)
 
@@ -1359,127 +1359,220 @@ function PipelineBanner({ act }: { act: number }) {
 
 function KVAct2_WithoutCache({ baseDelay }: { baseDelay: number }) {
   const d = baseDelay
+  const [pass, setPass] = useState(0)
+  const passTimers = useRef<ReturnType<typeof setTimeout>[]>([])
+
+  useEffect(() => {
+    passTimers.current.forEach(clearTimeout)
+    passTimers.current = []
+
+    const startMs = d * 1000 + 800
+    const spacing = 1300 // 1.3s per pass
+
+    for (let p = 1; p <= 8; p++) {
+      passTimers.current.push(setTimeout(() => setPass(p), startMs + (p - 1) * spacing))
+    }
+
+    return () => {
+      passTimers.current.forEach(clearTimeout)
+      passTimers.current = []
+    }
+  }, [d])
+
+  const genWords = ['flies', 'fast', 'when', 'you', 'are', 'having', 'fun', '…']
+
   return (
     <div className="kv-stage" style={{ animationDelay: `${d}s` }}>
+      {/* Title */}
       <p className="mono uppercase kv-narr" style={{
         fontSize: '1.3vw',
         color: '#ef4444',
         letterSpacing: '0.12em',
-        marginBottom: '0.8vh',
+        marginBottom: '0.4vh',
         animationDelay: `${d}s`,
       }}>
         ✗ Without KV cache — recompute all K,V each step
       </p>
 
-      {/* Rhetorical echo from primer header */}
-      <p className="kv-narr" style={{
-        animationDelay: `${d + 0.15}s`,
-        fontSize: '0.8vw',
-        color: 'rgba(252,211,77,0.6)',
-        fontStyle: 'italic',
-        textAlign: 'center',
-        marginBottom: '0.5vh',
-      }}>
-        k⁽¹⁾…k⁽⁷⁾ haven't changed — why recompute them?
-      </p>
+      {/* Pass indicator */}
+      <div style={{ textAlign: 'center', marginBottom: '0.4vh', minHeight: '2.2vh' }}>
+        {pass > 0 && (
+          <div key={pass} className="kv-narr" style={{ animationDelay: '0s' }}>
+            <span className="mono" style={{ color: '#fcd34d', fontSize: '1.0vw' }}>
+              Step {pass} / 8 · predicting "{genWords[pass - 1]}"
+            </span>
+          </div>
+        )}
+      </div>
 
-      <div className="flex justify-center gap-1.5" style={{ flexWrap: 'nowrap' }}>
+      {/* Rhetorical subtitle — appears from pass 2 */}
+      <div style={{ textAlign: 'center', minHeight: '1.6vh', marginBottom: '0.3vh' }}>
+        {pass >= 2 && (
+          <p className="kv-narr" style={{
+            animationDelay: '0s',
+            fontSize: '0.85vw',
+            color: 'rgba(252,211,77,0.6)',
+            fontStyle: 'italic',
+          }}>
+            k⁽¹⁾…k⁽{pass - 1}⁾ haven't changed — why recompute them?
+          </p>
+        )}
+      </div>
+
+      {/* Token cards row */}
+      <div className="flex justify-center gap-1.5" style={{ flexWrap: 'nowrap', minHeight: '14vh' }}>
         {KV_TOKENS.map((tok, i) => {
-          const isNew = i === KV_TOKENS.length - 1
-          const computeDelay = d + 0.3 + i * 0.18
+          const tokenPass = i + 1
+          if (pass < tokenPass) return null
+
+          const isFinalToken = i === KV_TOKENS.length - 1
+          const isNew = pass === tokenPass
+          const isWaste = !isNew
+
           return (
             <div
               key={tok.sup}
               className="kv-compute"
               style={{
-                animationDelay: `${computeDelay}s`,
+                animationDelay: '0s',
                 textAlign: 'center',
-                minWidth: '5.5vw',
-                padding: '0.5vh 0.35vw',
-                border: `1px solid ${isNew ? 'rgba(134,239,172,0.4)' : 'rgba(239,68,68,0.3)'}`,
+                minWidth: '4.8vw',
+                padding: '0.5vh 0.3vw',
+                border: `1px solid ${isNew
+                  ? 'rgba(134,239,172,0.5)'
+                  : 'rgba(239,68,68,0.3)'}`,
                 borderRadius: '8px',
-                background: isNew ? 'rgba(134,239,172,0.05)' : 'rgba(239,68,68,0.04)',
-                opacity: isNew ? 1 : 0.55,
+                background: isNew
+                  ? 'rgba(134,239,172,0.08)'
+                  : 'rgba(239,68,68,0.04)',
+                transition: 'border-color 0.6s ease, background 0.6s ease',
+                opacity: isWaste && !isFinalToken ? 0.55 : 1,
               }}
             >
-              <div style={{ color: isNew ? '#86efac' : '#a78bfa', fontSize: '1.15vw' }}>
+              <div style={{
+                color: isNew ? '#86efac' : '#a78bfa',
+                fontSize: '1.1vw',
+                transition: 'color 0.5s ease',
+              }}>
                 "{tok.word}"
               </div>
               <div style={{
                 color: isNew ? '#86efac' : '#ef4444',
                 fontSize: '0.8vw',
                 margin: '0.2vh 0',
+                lineHeight: 1.4,
+                transition: 'color 0.5s ease',
               }}>
-                {isNew ? '↓W_q ↓W_k ↓W_v' : '↓W_k ↓W_v'}
-                {!isNew && <span style={{ color: '#fca5a5', fontSize: '0.85em', marginLeft: '0.2vw' }}>×2</span>}
+                {isFinalToken && isNew ? (
+                  <>↓W_q<br />↓W_k<br />↓W_v</>
+                ) : (
+                  <>↓W_k<br />↓W_v{isWaste && <span style={{ color: '#fca5a5', fontSize: '0.85em' }}> ×2</span>}</>
+                )}
               </div>
-              <div className="kv-wasted" style={{
-                animationDelay: `${computeDelay + 0.3}s`,
+              <div style={{
                 color: isNew ? '#86efac' : '#fca5a5',
                 fontSize: '0.75vw',
+                transition: 'color 0.5s ease',
               }}>
-                {isNew ? '✓ needed' : `♻ redo · step ${i + 1}`}
+                {isNew
+                  ? (isFinalToken ? '✓ needed' : '✓ compute')
+                  : `♻ redo · step ${i + 1}`}
               </div>
               <div className="mono" style={{ fontSize: '0.7vw', marginTop: '0.2vh', color: 'rgba(255,255,255,0.6)' }}>
-                {isNew ? `q⁽${tok.sup}⁾ k⁽${tok.sup}⁾ v⁽${tok.sup}⁾` : `k⁽${tok.sup}⁾ v⁽${tok.sup}⁾`}
+                {isFinalToken && isNew
+                  ? <>q⁽{tok.sup}⁾ k⁽{tok.sup}⁾<br />v⁽{tok.sup}⁾</>
+                  : <>k⁽{tok.sup}⁾ v⁽{tok.sup}⁾</>}
               </div>
             </div>
           )
         })}
       </div>
 
-      {/* Identity callout */}
-      <p className="kv-narr" style={{
-        animationDelay: `${d + 2.0}s`,
-        fontSize: '0.8vw',
-        color: '#fcd34d',
-        textAlign: 'center',
-        marginTop: '0.5vh',
-        fontStyle: 'italic',
-      }}>
-        k⁽¹⁾ at step 8 ≡ k⁽¹⁾ at step 1 — same input, same weights, same output.
-      </p>
+      {/* Attention arcs — curved arrows from each past token to the new token */}
+      <div style={{ display: 'flex', justifyContent: 'center', minHeight: '5vh' }}>
+        {pass >= 2 && (() => {
+          const n = pass
+          const cw = 48, gw = 4, step = cw + gw
+          const vbW = n * step - gw
+          const newCx = (n - 1) * step + cw / 2
+          const maxDepth = 20 + (n - 1) * 12
+          const vbH = maxDepth + 18
+          return (
+            <svg
+              key={pass}
+              viewBox={`0 -2 ${vbW} ${vbH}`}
+              preserveAspectRatio="none"
+              style={{ width: `${n * 5.15 - 0.35}vw`, height: '5vh', overflow: 'visible' }}
+            >
+              <defs>
+                <marker id="kv-arc-arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+                  <path d="M0,0 L10,4 L0,8" fill="#fcd34d" />
+                </marker>
+              </defs>
+              {Array.from({ length: n - 1 }).map((_, i) => {
+                const sx = i * step + cw / 2
+                const mx = (sx + newCx) / 2
+                const dist = n - 1 - i
+                const depth = 20 + dist * 12
+                return (
+                  <path
+                    key={i}
+                    d={`M${sx},0 Q${mx},${depth} ${newCx},0`}
+                    fill="none"
+                    stroke="#fcd34d"
+                    strokeWidth={3}
+                    strokeOpacity={0.3 + 0.4 * (1 / dist)}
+                    markerEnd="url(#kv-arc-arrow)"
+                    style={{
+                      opacity: 0,
+                      animation: `kvNarrIn 0.6s ease-out ${i * 0.08}s forwards`,
+                    }}
+                  />
+                )
+              })}
+            </svg>
+          )
+        })()}
+      </div>
 
-      {/* Attention scores row */}
-      <div className="kv-narr" style={{
-        animationDelay: `${d + 2.2}s`,
-        textAlign: 'center',
-        marginTop: '0.4vh',
-      }}>
-        <div style={{ fontSize: '0.7vw', color: 'var(--dim)', marginBottom: '0.15vh' }}>
-          attention scores (need all 8 keys):
-        </div>
-        <div className="flex justify-center gap-2 mono" style={{
-          fontSize: '0.85vw',
-          color: '#fcd34d',
+      {/* Identity callout — at final pass */}
+      <div style={{ minHeight: '1.8vh', marginTop: '0.4vh' }}>
+        {pass >= 8 && (
+          <p className="kv-narr" style={{
+            animationDelay: '0s',
+            fontSize: '0.8vw',
+            color: '#fcd34d',
+            textAlign: 'center',
+            fontStyle: 'italic',
+          }}>
+            k⁽¹⁾ at step 8 ≡ k⁽¹⁾ at step 1 — same input, same weights, same output.
+          </p>
+        )}
+      </div>
+
+      {/* Cost counter — at final pass */}
+      {pass >= 8 && (
+        <div className="kv-cost" style={{
+          animationDelay: '0s',
+          marginTop: '0.3vh',
+          padding: '0.5vh 1.2vw',
+          background: 'rgba(239,68,68,0.08)',
+          border: '1px solid rgba(239,68,68,0.3)',
+          borderRadius: '8px',
+          textAlign: 'center',
         }}>
-          {KV_TOKENS.map((tok) => (
-            <span key={tok.sup}>q⁽⁸⁾·k⁽{tok.sup}⁾</span>
-          ))}
+          <span className="mono" style={{ color: '#fca5a5', fontSize: '1.1vw' }}>
+            Cost: 1 × W<sub>q</sub> + 8 × W<sub>k</sub> + 8 × W<sub>v</sub> ={' '}
+            <strong style={{ color: '#ef4444' }}>17 matrix multiplications</strong>
+          </span>
+          <div style={{ color: '#ef4444', fontSize: '0.85vw', marginTop: '0.2vh' }}>
+            7 tokens × 2 ops = 14 redundant matmuls
+          </div>
+          <div style={{ color: 'rgba(239,68,68,0.5)', fontSize: '0.7vw', marginTop: '0.15vh' }}>
+            Over 200 tokens: ~40,000 wasted matmuls per layer.
+          </div>
         </div>
-      </div>
-
-      {/* Cost counter */}
-      <div className="kv-cost" style={{
-        animationDelay: `${d + 2.8}s`,
-        marginTop: '0.6vh',
-        padding: '0.5vh 1.2vw',
-        background: 'rgba(239,68,68,0.08)',
-        border: '1px solid rgba(239,68,68,0.3)',
-        borderRadius: '8px',
-        textAlign: 'center',
-      }}>
-        <span className="mono" style={{ color: '#fca5a5', fontSize: '1.15vw' }}>
-          Cost: 1 × W<sub>q</sub> + 8 × W<sub>k</sub> + 8 × W<sub>v</sub> ={' '}
-          <strong style={{ color: '#ef4444' }}>17 matrix multiplications</strong>
-        </span>
-        <div style={{ color: '#ef4444', fontSize: '0.85vw', marginTop: '0.2vh' }}>
-          7 tokens × 2 ops = 14 redundant matmuls — tokens 1–7 were already computed in previous steps!
-        </div>
-        <div style={{ color: 'rgba(239,68,68,0.5)', fontSize: '0.7vw', marginTop: '0.15vh' }}>
-          At step 8: 14 wasted. Over 200 tokens: ~40,000 wasted matmuls per layer.
-        </div>
-      </div>
+      )}
     </div>
   )
 }
@@ -1608,7 +1701,7 @@ function KVAct3_WithCache({ baseDelay }: { baseDelay: number }) {
   )
 }
 
-function S12_KVCacheExplainer() {
+function S13_KVCacheExplainer() {
   const [act, setAct] = useState(1)
   const timerRefs = useRef<ReturnType<typeof setTimeout>[]>([])
 
@@ -1617,7 +1710,7 @@ function S12_KVCacheExplainer() {
     timerRefs.current = []
 
     timerRefs.current.push(setTimeout(() => setAct(2), 3_800))
-    timerRefs.current.push(setTimeout(() => setAct(3), 8_800))
+    timerRefs.current.push(setTimeout(() => setAct(3), 16_000))
 
     return () => {
       timerRefs.current.forEach(clearTimeout)
@@ -1628,8 +1721,8 @@ function S12_KVCacheExplainer() {
   const t = {
     tokens:    2.0,
     act2:      3.8,
-    act3:      8.8,
-    takeaway: 13.8,
+    act3:     16.0,
+    takeaway: 22.0,
   }
 
   return (
@@ -1773,7 +1866,7 @@ function S12_KVCacheExplainer() {
   )
 }
 
-// ─── Slide 13b: Cache Edit Pipeline — Client Memory → KV Cache ───────────────
+// ─── Slide 15: Cache Edit Pipeline — Client Memory → KV Cache ────────────────
 //
 // Animates the three-layer journey of a cached tool_result eviction:
 //   1. Client memory  — messages[] is never mutated, full content stays
@@ -2209,7 +2302,7 @@ function CostComparison({ baseDelay }: { baseDelay: number }) {
   )
 }
 
-function S13_KVCacheDepth() {
+function S14_KVCacheDepth() {
   const t = {
     prefill:    0.6,
     decode:     7.0,
@@ -2259,7 +2352,7 @@ function S13_KVCacheDepth() {
   )
 }
 
-function S11d_CacheEditPipeline() {
+function S15_CacheEditPipeline() {
   // Base delay offsets (seconds). Keep them as variables so the pacing is
   // obvious from one place. The viewer reads each stage ~1.5s before the
   // next element starts to fade in.
@@ -2686,7 +2779,7 @@ function S11d_CacheEditPipeline() {
   )
 }
 
-// ─── Sub-components used by S11d_CacheEditPipeline ───────────────────────────
+// ─── Sub-components used by S15_CacheEditPipeline ────────────────────────────
 
 function PageStoreRow({
   delay,
@@ -3055,9 +3148,9 @@ function DecodeAttentionView({ t }: { t: Record<string, number> }) {
   )
 }
 
-// ─── Slide 12: L1 Before/After ───────────────────────────────────────────────
+// ─── Slide 11: L1 Before/After ───────────────────────────────────────────────
 
-function S12_MicrocompactDemo() {
+function S11_MicrocompactDemo() {
   return (
     <div className="reveal-stagger flex flex-col items-center gap-6">
       <p className="slide-h3">Layer 1 — In Action</p>
@@ -3108,9 +3201,9 @@ function S12_MicrocompactDemo() {
   )
 }
 
-// ─── Slide 13: L2 Auto-Compact Concept ───────────────────────────────────────
+// ─── Slide 17: L2 Auto-Compact Concept ───────────────────────────────────────
 
-function S13_AutoCompactConcept() {
+function S17_AutoCompactConcept() {
   // Bar segments: left→right = [167K threshold | 13K buffer | 20K reserved] = 200K total
   const TOTAL = 200
   const segments = [
@@ -3370,7 +3463,7 @@ function S13_AutoCompactConcept() {
   )
 }
 
-// ─── Slide 14: L2 Decision Tree (ReactFlow) ─────────────────────────────────
+// ─── Slide 18: L2 Decision Tree (ReactFlow) ─────────────────────────────────
 
 // Detail data for each decision tree node
 const DECISION_DETAILS: Record<string, {
@@ -3505,7 +3598,7 @@ const DECISION_DETAILS: Record<string, {
   },
 }
 
-function S14_DecisionTree() {
+function S18_DecisionTree() {
   const [selectedNode, setSelectedNode] = useState<string | null>(null)
   const [popupOrigin, setPopupOrigin] = useState<{ x: number; y: number } | null>(null)
   const [isOpen, setIsOpen] = useState(false)
@@ -3741,9 +3834,9 @@ function S14_DecisionTree() {
   )
 }
 
-// ─── Slide 15: L4 Session Memory ─────────────────────────────────────────────
+// ─── Slide 19: L4 Session Memory ─────────────────────────────────────────────
 
-function S15_SessionMemory() {
+function S19_SessionMemory() {
   const sections = [
     { name: 'Session Title', desc: 'What this session is about' },
     { name: 'Current State', desc: 'Status of the work right now' },
@@ -4526,9 +4619,9 @@ function CompNarration({ text }: { text: string }) {
   )
 }
 
-// ─── Slide 15b: Session Memory — Under the Hood ─────────────────────────────
+// ─── Slide 21: Session Memory — Under the Hood ──────────────────────────────
 
-function S15b_SessionMemoryDeep() {
+function S21_SessionMemoryDeep() {
   return (
     <div className="reveal-stagger flex flex-col items-center" style={{ gap: '0.6vh', maxHeight: '100vh', paddingTop: '1vh', paddingBottom: '3vh' }}>
       <p className="slide-h3" style={{ fontSize: '1.5vw' }}>Layer 4 — Under the Hood</p>
@@ -4666,9 +4759,9 @@ function S15b_SessionMemoryDeep() {
   )
 }
 
-// ─── Slide 16: L4 What Survives ──────────────────────────────────────────────
+// ─── Slide 20: L4 What Survives ──────────────────────────────────────────────
 
-function S16_WhatSurvives() {
+function S20_WhatSurvives() {
   const msgs = [
     { role: 'user', text: 'Please fix the login bug...', tokens: '245' },
     { role: 'assistant', text: 'I\'ll look at the auth code...', tokens: '1,847' },
@@ -4740,9 +4833,9 @@ function S16_WhatSurvives() {
   )
 }
 
-// ─── Slide 17: The Memory System ─────────────────────────────────────────────
+// ─── Slide 22: The Memory System ─────────────────────────────────────────────
 
-function S17_MemorySystem() {
+function S22_MemorySystem() {
   // Tiers ordered bottom-to-top (session → persistent → team)
   const tiers = [
     {
@@ -4945,7 +5038,7 @@ function S17_MemorySystem() {
   )
 }
 
-// ─── Slide 18: L3 Full Compact ───────────────────────────────────────────────
+// ─── Slide 23: L3 Full Compact ───────────────────────────────────────────────
 
 // Precise template for each of the 9 summary sections — shown on hover
 const SUMMARY_TEMPLATE: { num: string; label: string; title: string; body: string }[] = [
@@ -5005,7 +5098,7 @@ const SUMMARY_TEMPLATE: { num: string; label: string; title: string; body: strin
   },
 ]
 
-function S17_FullCompact() {
+function S23_FullCompact() {
   const inputMsgs = [
     { role: 'user', text: 'Fix the auth bug in login.ts', color: '#3b82f6' },
     { role: 'assistant', text: 'I\'ll read the auth module...', color: '#818cf8' },
@@ -5347,9 +5440,9 @@ function S17_FullCompact() {
   )
 }
 
-// ─── Slide 21: Full-Compact Under the Hood ───────────────────────────────────
+// ─── Slide 24: Full-Compact Under the Hood ───────────────────────────────────
 
-function S18_CompactDetails() {
+function S24_CompactDetails() {
   // Post-compaction assembled message sequence
   const postSeq = [
     { idx: '1', name: 'CompactBoundaryMessage', desc: 'Marks compaction boundary with token stats + trigger type', color: '#0ea5e9' },
@@ -5764,9 +5857,9 @@ function S18_CompactDetails() {
   )
 }
 
-// ─── Slide 19: Snip Compact ──────────────────────────────────────────────────
+// ─── Slide 25: Snip Compact ──────────────────────────────────────────────────
 
-function S19_Snip() {
+function S25_Snip() {
   const turns = [
     { role: 'user', text: 'Fix the auth bug in login.ts', tokens: '180' },
     { role: 'assistant', text: 'Looking at the auth module...', tokens: '2,400' },
@@ -5887,11 +5980,11 @@ function S19_Snip() {
   )
 }
 
-// ─── Slide 20: Progressive Degradation Scale ─────────────────────────────────
+// ─── Slide 26: Progressive Degradation Scale ─────────────────────────────────
 
-// ─── Slide 20: Degradation Scale — "Signal Erosion" design ─────────────────
+// ─── Slide 26: Degradation Scale — "Signal Erosion" design ─────────────────
 
-const S20_LAYERS = [
+const S26_LAYERS = [
   {
     name: 'L1 Micro-Compact', preserved: 100, color: '#10b981', icon: '✂️',
     latency: '<1ms', cost: 'No LLM',
@@ -5922,7 +6015,7 @@ const S20_LAYERS = [
   },
 ] as const
 
-const S20_CIRC = 2 * Math.PI * 48
+const S26_CIRC = 2 * Math.PI * 48
 
 // Erosion grid: 32 cols × 3 rows = 96 elements (down from 160).
 // Precomputed as flat array with column-based delay grouping.
@@ -5977,7 +6070,7 @@ function AnimatedPct({ target, color, delay }: { target: number; color: string; 
   )
 }
 
-function S20_DegradationScale() {
+function S26_DegradationScale() {
   return (
     <div className="reveal-stagger flex flex-col items-center" style={{ gap: '1.2vh' }}>
       <p className="slide-h3" style={{ color: '#818cf8' }}>The Spectrum</p>
@@ -5987,7 +6080,7 @@ function S20_DegradationScale() {
       <div style={{ width: '88vw' }}>
         {/* Stage labels above the grid */}
         <div className="flex" style={{ marginBottom: '0.6vh' }}>
-          {S20_LAYERS.map((l, i) => (
+          {S26_LAYERS.map((l, i) => (
             <div key={i} className="erosion-label flex items-center justify-center gap-1.5" style={{ flex: 1, animationDelay: `${0.3 + i * 0.4}s` }}>
               <span style={{ fontSize: '1vw' }}>{l.icon}</span>
               <span className="mono font-bold" style={{ fontSize: '0.8vw', color: l.color, letterSpacing: '0.06em' }}>{l.name}</span>
@@ -6016,7 +6109,7 @@ function S20_DegradationScale() {
               style={{
                 aspectRatio: '1',
                 animationDelay: EROSION_COL_DELAYS[cell.col],
-                ['--cell-color' as string]: S20_LAYERS[cell.stage].color,
+                ['--cell-color' as string]: S26_LAYERS[cell.stage].color,
               }}
             />
           ))}
@@ -6031,8 +6124,8 @@ function S20_DegradationScale() {
 
       {/* ═══ Detail columns — ring gauges + LOST/KEPT ═══ */}
       <div className="flex items-start" style={{ width: '90vw', gap: '0.5vw' }}>
-        {S20_LAYERS.map((l, i) => {
-          const fill = S20_CIRC * (l.preserved / 100)
+        {S26_LAYERS.map((l, i) => {
+          const fill = S26_CIRC * (l.preserved / 100)
           const redTint = ((100 - l.preserved) / 100) * 0.08
           const baseDelay = 0.8 + i * 0.35
           const listBase = baseDelay + 1.6
@@ -6058,7 +6151,7 @@ function S20_DegradationScale() {
                     cx="60" cy="60" r="48" fill="none" stroke={l.color} strokeWidth="14"
                     strokeLinecap="round" transform="rotate(-90 60 60)" opacity="0.15"
                     style={{
-                      strokeDasharray: `${fill.toFixed(1)} ${S20_CIRC.toFixed(1)}`,
+                      strokeDasharray: `${fill.toFixed(1)} ${S26_CIRC.toFixed(1)}`,
                       strokeDashoffset: fill.toFixed(1),
                       animationDelay: `${baseDelay + 0.5}s`,
                     }}
@@ -6069,7 +6162,7 @@ function S20_DegradationScale() {
                     cx="60" cy="60" r="48" fill="none" stroke={l.color} strokeWidth="7"
                     strokeLinecap="round" transform="rotate(-90 60 60)" opacity="0.9"
                     style={{
-                      strokeDasharray: `${fill.toFixed(1)} ${S20_CIRC.toFixed(1)}`,
+                      strokeDasharray: `${fill.toFixed(1)} ${S26_CIRC.toFixed(1)}`,
                       strokeDashoffset: fill.toFixed(1),
                       animationDelay: `${baseDelay + 0.5}s`,
                     }}
@@ -6078,7 +6171,7 @@ function S20_DegradationScale() {
                   {l.preserved < 100 && (
                     <circle cx="60" cy="60" r="48" fill="none" stroke="rgba(239,68,68,0.18)" strokeWidth="7"
                       strokeLinecap="round" transform="rotate(-90 60 60)"
-                      style={{ strokeDasharray: `${(S20_CIRC - fill).toFixed(1)} ${S20_CIRC.toFixed(1)}`, strokeDashoffset: `${-(fill).toFixed(1)}` }}
+                      style={{ strokeDasharray: `${(S26_CIRC - fill).toFixed(1)} ${S26_CIRC.toFixed(1)}`, strokeDashoffset: `${-(fill).toFixed(1)}` }}
                     />
                   )}
                   <AnimatedPct target={l.preserved} color={l.color} delay={baseDelay + 0.6} />
@@ -6139,7 +6232,7 @@ function S20_DegradationScale() {
                       <defs>
                         <linearGradient id={`arrGrad${i}`} x1="0%" y1="0%" x2="100%" y2="0%">
                           <stop offset="0%" stopColor={l.color} stopOpacity="0.3" />
-                          <stop offset="100%" stopColor={S20_LAYERS[i + 1].color} stopOpacity="0.7" />
+                          <stop offset="100%" stopColor={S26_LAYERS[i + 1].color} stopOpacity="0.7" />
                         </linearGradient>
                       </defs>
                       <path d="M4 16 L22 16 M17 10 L24 16 L17 22" stroke={`url(#arrGrad${i})`} strokeWidth="2.5" fill="none" strokeLinecap="round" />
@@ -6159,9 +6252,9 @@ function S20_DegradationScale() {
   )
 }
 
-// ─── Slide 24: Level 2 → Level 3 separator ───────────────────────────────────
+// ─── Slide 27: Level 2 → Level 3 separator ───────────────────────────────────
 
-function S20b_ToMachinery() {
+function S27_ToMachinery() {
   const chips = [
     'Query Loop',
     'Token Math',
@@ -6176,7 +6269,7 @@ function S20b_ToMachinery() {
 
   return (
     <div className="relative w-full h-full flex flex-col items-center justify-center">
-      {/* Ambient particles (matches S10_GoDeeper) */}
+      {/* Ambient particles (matches S09_GoDeeper) */}
       {Array.from({ length: 14 }).map((_, i) => (
         <div
           key={i}
@@ -6261,22 +6354,22 @@ function S20b_ToMachinery() {
 // ─── Export ──────────────────────────────────────────────────────────────────
 
 export const level2Slides = [
-  S11_MicrocompactConcept,
-  S12_MicrocompactDemo,
-  S11b_TwoSubPaths,
-  S12_KVCacheExplainer,
-  S13_KVCacheDepth,
-  S11d_CacheEditPipeline,
-  S11c_CachedEditInternals,
-  S13_AutoCompactConcept,
-  S14_DecisionTree,
-  S15_SessionMemory,
-  S16_WhatSurvives,
-  S15b_SessionMemoryDeep,
-  S17_MemorySystem,
-  S17_FullCompact,
-  S18_CompactDetails,
-  S19_Snip,
-  S20_DegradationScale,
-  S20b_ToMachinery,
+  S10_MicrocompactConcept,
+  S11_MicrocompactDemo,
+  S12_TwoSubPaths,
+  S13_KVCacheExplainer,
+  S14_KVCacheDepth,
+  S15_CacheEditPipeline,
+  S16_CachedEditInternals,
+  S17_AutoCompactConcept,
+  S18_DecisionTree,
+  S19_SessionMemory,
+  S20_WhatSurvives,
+  S21_SessionMemoryDeep,
+  S22_MemorySystem,
+  S23_FullCompact,
+  S24_CompactDetails,
+  S25_Snip,
+  S26_DegradationScale,
+  S27_ToMachinery,
 ]

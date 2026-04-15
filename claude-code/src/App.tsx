@@ -1,6 +1,6 @@
 /**
  * Slide engine — manages navigation, transitions, progress, and level indicators.
- * 36 slides across 3 depth levels about Context Management in Claude Code.
+ * 38 slides across 3 depth levels about Context Management in Claude Code.
  */
 
 import { useEffect, useState, useCallback, useRef, type TouchEvent as ReactTouchEvent } from 'react'
@@ -12,11 +12,11 @@ const ALL_SLIDES = [...level1Slides, ...level2Slides, ...level3Slides]
 
 const LEVELS = [
   { name: 'Level 1 — The Big Picture', color: '#d97706', range: [0, 8] },
-  { name: 'Level 2 — Each Layer', color: '#818cf8', range: [9, 24] },
-  { name: 'Level 3 — The Machinery', color: '#f43f5e', range: [25, 35] },
+  { name: 'Level 2 — Each Layer', color: '#818cf8', range: [9, 26] },
+  { name: 'Level 3 — The Machinery', color: '#f43f5e', range: [27, 37] },
 ] as const
 
-// O(1) lookup table — avoids iterating LEVELS for every nav dot (36 calls/render)
+// O(1) lookup table — avoids iterating LEVELS for every nav dot (38 calls/render)
 const SLIDE_LEVEL_MAP = /* @__PURE__ */ (() => {
   const map: (typeof LEVELS)[number][] = []
   for (const l of LEVELS) {
@@ -144,7 +144,7 @@ export default function App() {
         {current + 1} / {total}
       </div>
 
-      {/* Slides — direct index access instead of iterating all 36 */}
+      {/* Slides — direct index access instead of iterating all 38 */}
       <div className="relative h-full w-full">
         {[current, prevSlide].map(idx => {
           if (idx === null || idx === undefined) return null
@@ -168,7 +168,7 @@ export default function App() {
       <div className="nav-dots fixed bottom-5 left-1/2 -translate-x-1/2 flex items-center gap-1 z-50">
         {ALL_SLIDES.map((_, idx) => {
           const l = getLevel(idx)
-          const isLevelStart = idx === 0 || idx === 9 || idx === 25
+          const isLevelStart = idx === 0 || idx === 9 || idx === 27
           return (
             <div key={idx} className="flex items-center">
               {isLevelStart && idx > 0 && (

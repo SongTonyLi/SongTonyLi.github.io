@@ -1316,6 +1316,224 @@ html, body, #root {
 }
 
 /* =========================================================================
+   KV Cache Explainer (S12) — narrative reveal + act transitions
+   ========================================================================= */
+
+/* Stage reveal — same feel as cep-stage but slightly faster for the denser layout */
+.kv-stage {
+  opacity: 0;
+  transform: translateY(16px) scale(0.98);
+  animation: kvStageIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.slide-container:not(.active) .kv-stage {
+  animation: none;
+  opacity: 0;
+}
+
+@keyframes kvStageIn {
+  0%   { opacity: 0; transform: translateY(16px) scale(0.98); }
+  60%  { opacity: 1; }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Narrator text — fade up from below */
+.kv-narr {
+  opacity: 0;
+  animation: kvNarrIn 0.9s ease-out forwards;
+}
+
+.slide-container:not(.active) .kv-narr {
+  animation: none;
+  opacity: 0;
+}
+
+@keyframes kvNarrIn {
+  0%   { opacity: 0; transform: translateY(8px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+/* Token box cascade — pop in with slight overshoot */
+.kv-token {
+  opacity: 0;
+  transform: scale(0.7) translateY(10px);
+  animation: kvTokenIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.slide-container:not(.active) .kv-token {
+  animation: none;
+  opacity: 0;
+}
+
+@keyframes kvTokenIn {
+  0%   { opacity: 0; transform: scale(0.7) translateY(10px); }
+  70%  { opacity: 1; transform: scale(1.05) translateY(-2px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* Computation flash — W_k/W_v arrows firing, brief brightness pulse */
+.kv-compute {
+  opacity: 0;
+  animation: kvComputeFlash 0.6s ease-out forwards;
+}
+
+.slide-container:not(.active) .kv-compute {
+  animation: none;
+  opacity: 0;
+}
+
+@keyframes kvComputeFlash {
+  0%   { opacity: 0; filter: brightness(2); }
+  30%  { opacity: 1; filter: brightness(1.6); }
+  100% { opacity: 1; filter: brightness(1); }
+}
+
+/* Red pulse for wasted computation labels */
+.kv-wasted {
+  opacity: 0;
+  animation: kvWastedPulse 0.8s ease-out forwards;
+}
+
+.slide-container:not(.active) .kv-wasted {
+  animation: none;
+  opacity: 0;
+}
+
+@keyframes kvWastedPulse {
+  0%   { opacity: 0; text-shadow: 0 0 0 rgba(239,68,68,0); }
+  40%  { opacity: 1; text-shadow: 0 0 12px rgba(239,68,68,0.8); }
+  100% { opacity: 1; text-shadow: 0 0 0 rgba(239,68,68,0); }
+}
+
+/* Cache box slide-in with glow */
+.kv-cache-in {
+  opacity: 0;
+  transform: translateY(-24px) scale(0.96);
+  animation: kvCacheSlideIn 1.0s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.slide-container:not(.active) .kv-cache-in {
+  animation: none;
+  opacity: 0;
+}
+
+@keyframes kvCacheSlideIn {
+  0%   { opacity: 0; transform: translateY(-24px) scale(0.96); box-shadow: 0 0 0 rgba(129,140,248,0); }
+  50%  { opacity: 1; box-shadow: 0 0 30px rgba(129,140,248,0.4); }
+  100% { opacity: 1; transform: translateY(0) scale(1); box-shadow: 0 0 12px rgba(129,140,248,0.15); }
+}
+
+/* Pipeline banner highlight pulses */
+.kv-pulse-red {
+  animation: kvPulseRed 2.0s ease-out forwards;
+}
+
+@keyframes kvPulseRed {
+  0%   { border-color: inherit; box-shadow: 0 0 0 rgba(239,68,68,0); }
+  30%  { border-color: rgba(239,68,68,0.8); box-shadow: 0 0 14px rgba(239,68,68,0.5); }
+  100% { border-color: inherit; box-shadow: 0 0 0 rgba(239,68,68,0); }
+}
+
+.kv-pulse-indigo {
+  animation: kvPulseIndigo 2.0s ease-out forwards;
+}
+
+@keyframes kvPulseIndigo {
+  0%   { border-color: inherit; box-shadow: 0 0 0 rgba(129,140,248,0); }
+  30%  { border-color: rgba(129,140,248,0.8); box-shadow: 0 0 14px rgba(129,140,248,0.5); }
+  100% { border-color: inherit; box-shadow: 0 0 0 rgba(129,140,248,0); }
+}
+
+.kv-pulse-green {
+  animation: kvPulseGreen 2.0s ease-out forwards;
+}
+
+@keyframes kvPulseGreen {
+  0%   { border-color: inherit; box-shadow: 0 0 0 rgba(134,239,172,0); }
+  30%  { border-color: rgba(134,239,172,0.8); box-shadow: 0 0 14px rgba(134,239,172,0.5); }
+  100% { border-color: inherit; box-shadow: 0 0 0 rgba(134,239,172,0); }
+}
+
+.slide-container:not(.active) .kv-pulse-red,
+.slide-container:not(.active) .kv-pulse-indigo,
+.slide-container:not(.active) .kv-pulse-green {
+  animation: none;
+}
+
+/* Cost counter — grows in from left */
+.kv-cost {
+  opacity: 0;
+  transform: scaleX(0.8);
+  transform-origin: left center;
+  animation: kvCostIn 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.slide-container:not(.active) .kv-cost {
+  animation: none;
+  opacity: 0;
+}
+
+@keyframes kvCostIn {
+  0%   { opacity: 0; transform: scaleX(0.8); }
+  100% { opacity: 1; transform: scaleX(1); }
+}
+
+/* SVG attention arc draw — stroke-dashoffset animation for attention lines */
+.kv-attn {
+  stroke-dasharray: 300;
+  stroke-dashoffset: 300;
+  opacity: 0;
+  animation: kvAttnDraw 0.8s cubic-bezier(0.25, 0.8, 0.3, 1) forwards;
+}
+
+.slide-container:not(.active) .kv-attn {
+  animation: none;
+  opacity: 0;
+}
+
+@keyframes kvAttnDraw {
+  0%   { stroke-dashoffset: 300; opacity: 0; }
+  15%  { opacity: 0.8; }
+  100% { stroke-dashoffset: 0; opacity: var(--attn-opacity, 0.5); }
+}
+
+/* Horizontal bar grow-right for cost comparison chart */
+.kv-bar-grow {
+  opacity: 0;
+  transform: scaleX(0);
+  transform-origin: left center;
+  animation: kvBarGrow 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.slide-container:not(.active) .kv-bar-grow {
+  animation: none;
+  opacity: 0;
+}
+
+@keyframes kvBarGrow {
+  0%   { opacity: 0; transform: scaleX(0); }
+  100% { opacity: 1; transform: scaleX(1); }
+}
+
+/* Cache pill append — slide in from right with glow */
+.kv-append {
+  opacity: 0;
+  transform: translateX(-12px) scale(0.9);
+  animation: kvAppendIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.slide-container:not(.active) .kv-append {
+  animation: none;
+  opacity: 0;
+}
+
+@keyframes kvAppendIn {
+  0%   { opacity: 0; transform: translateX(-12px) scale(0.9); box-shadow: 0 0 0 rgba(134,239,172,0); }
+  50%  { opacity: 1; box-shadow: 0 0 16px rgba(134,239,172,0.5); }
+  100% { opacity: 1; transform: translateX(0) scale(1); box-shadow: 0 0 0 rgba(134,239,172,0); }
+}
+
+/* =========================================================================
    Slide 20 — Degradation Scale enhancements
    ========================================================================= */
 

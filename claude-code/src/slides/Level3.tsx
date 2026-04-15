@@ -1,5 +1,5 @@
 /**
- * Level 3 — The Machinery (Slides 21-30)
+ * Level 3 — The Machinery (Slides 28-38)
  * Deep technical details: query loop, token math, circuit breaker,
  * reactive compact, context collapse, API invariants, post-compact,
  * fork agent, complete decision tree, and closing philosophy.
@@ -68,9 +68,9 @@ function MachineNode({ data }: { data: Record<string, unknown> }) {
 
 const machineNodeTypes = { mNode: MachineNode }
 
-// ─── Slide 21: Query Loop Integration ────────────────────────────────────────
+// ─── Slide 28: Query Loop Integration ────────────────────────────────────────
 
-function S21_QueryLoop() {
+function S28_QueryLoop() {
   const nodes: Node[] = useMemo(() => [
     { id: 'api_call', type: 'mNode', position: { x: 220, y: 0 }, data: { icon: '📡', label: 'API Call (query.ts)', detail: 'Send messages + tools to Claude API', bg: 'rgba(129,140,248,0.15)', borderColor: 'rgba(129,140,248,0.4)', glow: 'rgba(129,140,248,0.3)', _posX: 220, _posY: 0 } },
     { id: 'response', type: 'mNode', position: { x: 220, y: 100 }, data: { icon: '💬', label: 'Process Response', detail: 'Handle stop_reason, tool_use blocks', bg: 'rgba(129,140,248,0.1)', borderColor: 'rgba(129,140,248,0.3)', glow: 'rgba(129,140,248,0.2)', _posX: 220, _posY: 100 } },
@@ -101,14 +101,14 @@ function S21_QueryLoop() {
       </div>
       <div className="flex-1 w-full" style={{ minHeight: '65vh' }}>
         <ReactFlowProvider>
-          <S21_Inner nodes={nodes} edges={edges} />
+          <S28_Inner nodes={nodes} edges={edges} />
         </ReactFlowProvider>
       </div>
     </div>
   )
 }
 
-function S21_Inner({ nodes, edges }: { nodes: Node[]; edges: Edge[] }) {
+function S28_Inner({ nodes, edges }: { nodes: Node[]; edges: Edge[] }) {
   const { setCenter } = useReactFlow()
   const [selectedId, setSelectedId] = useState<string | null>(null)
 
@@ -152,9 +152,9 @@ function S21_Inner({ nodes, edges }: { nodes: Node[]; edges: Edge[] }) {
   )
 }
 
-// ─── Slide 22: Token Math ────────────────────────────────────────────────────
+// ─── Slide 29: Token Math ────────────────────────────────────────────────────
 
-function S22_TokenMath() {
+function S29_TokenMath() {
   return (
     <div className="reveal-stagger flex flex-col items-center gap-6">
       <p className="slide-h3" style={{ color: '#f43f5e' }}>The Gotcha</p>
@@ -220,9 +220,9 @@ function S22_TokenMath() {
   )
 }
 
-// ─── Slide 23: Circuit Breaker ───────────────────────────────────────────────
+// ─── Slide 30: Circuit Breaker ───────────────────────────────────────────────
 
-function S23_CircuitBreaker() {
+function S30_CircuitBreaker() {
   const [failures, setFailures] = useState(0)
   const tripped = failures >= 3
 
@@ -306,9 +306,9 @@ function S23_CircuitBreaker() {
   )
 }
 
-// ─── Slide 24: Reactive Compact ──────────────────────────────────────────────
+// ─── Slide 31: Reactive Compact ──────────────────────────────────────────────
 
-function S24_ReactiveCompact() {
+function S31_ReactiveCompact() {
   const recoveryLayers = [
     { n: '1', label: 'Context Collapse Drain', desc: 'Fold large blocks into short references', icon: '🗜️', color: '#8b5cf6', source: 'query.ts' },
     { n: '2', label: 'Reactive Compact', desc: 'Compact with aggressive 3K buffer. Retry 1-2: compact. Retry 3: snip. Retry 4+: fail.', icon: '📊', color: '#f59e0b', source: 'compact.ts', highlight: true },
@@ -465,9 +465,9 @@ function S24_ReactiveCompact() {
   )
 }
 
-// ─── Slide 25: Context Collapse ──────────────────────────────────────────────
+// ─── Slide 32: Context Collapse ──────────────────────────────────────────────
 
-function S25_ContextCollapse() {
+function S32_ContextCollapse() {
   return (
     <div className="reveal-stagger flex flex-col items-center gap-5">
       <p className="slide-h3" style={{ color: '#8b5cf6' }}>Experimental</p>
@@ -524,9 +524,9 @@ function S25_ContextCollapse() {
   )
 }
 
-// ─── Slide 26: API Invariant Preservation ────────────────────────────────────
+// ─── Slide 33: API Invariant Preservation ────────────────────────────────────
 
-function S26_APIInvariants() {
+function S33_APIInvariants() {
   return (
     <div className="reveal-stagger flex flex-col items-center gap-5">
       <p className="slide-h3" style={{ color: '#f43f5e' }}>Critical Detail</p>
@@ -617,9 +617,9 @@ function S26_APIInvariants() {
   )
 }
 
-// ─── Slide 27: Post-Compact Cleanup ──────────────────────────────────────────
+// ─── Slide 34: Post-Compact Cleanup ──────────────────────────────────────────
 
-function S27_PostCompact() {
+function S34_PostCompact() {
   return (
     <div className="reveal-stagger flex flex-col items-center gap-5">
       <p className="slide-h3" style={{ color: '#10b981' }}>After Compression</p>
@@ -691,9 +691,9 @@ function S27_PostCompact() {
   )
 }
 
-// ─── Slide 28: Fork Agent Cache Sharing ──────────────────────────────────────
+// ─── Slide 35: Fork Agent Cache Sharing ──────────────────────────────────────
 
-function S28_ForkAgent() {
+function S35_ForkAgent() {
   // Byte-block layout — relative widths that stay aligned between the parent
   // and fork rows, so the cached prefix lines up visually across both requests.
   const prefixFlex = { sys: 18, userCtx: 10, sysCtx: 10, msgs: 38 }
@@ -996,9 +996,9 @@ function S28_ForkAgent() {
   )
 }
 
-// ─── Slide 29: Memory Security & Team Sync ──────────────────────────────────
+// ─── Slide 36: Memory Security & Team Sync ──────────────────────────────────
 
-function S29_MemorySecurity() {
+function S36_MemorySecurity() {
   return (
     <div className="reveal-stagger flex flex-col items-center gap-4">
       <p className="slide-h3" style={{ color: '#f43f5e' }}>Defense in Depth</p>
@@ -1153,9 +1153,9 @@ function S29_MemorySecurity() {
   )
 }
 
-// ─── Slide 30: Complete Decision Tree (ReactFlow) ────────────────────────────
+// ─── Slide 37: Complete Decision Tree (ReactFlow) ────────────────────────────
 
-function S29_CompleteTree() {
+function S37_CompleteTree() {
   const nodes: Node[] = useMemo(() => [
     { id: 'entry', type: 'mNode', position: { x: 280, y: 0 }, data: { icon: '🔁', label: 'Query Loop Turn', bg: 'rgba(129,140,248,0.15)', borderColor: 'rgba(129,140,248,0.4)', glow: 'rgba(129,140,248,0.3)', _posX: 280, _posY: 0 } },
     { id: 'snip_pre', type: 'mNode', position: { x: 280, y: 80 }, data: { icon: '🚨', label: 'Pre-snip (if over limit)', bg: 'rgba(244,63,94,0.1)', borderColor: 'rgba(244,63,94,0.3)', glow: 'rgba(244,63,94,0.2)', _posX: 280, _posY: 80 } },
@@ -1214,7 +1214,7 @@ function S29_CompleteTree() {
   )
 }
 
-// ─── Slide 30: Closing Philosophy ────────────────────────────────────────────
+// ─── Slide 38: Closing Philosophy ────────────────────────────────────────────
 
 const Particles = memo(function Particles({ count = 12, color = '#d97706' }: { count?: number; color?: string }) {
   const items = useMemo(() =>
@@ -1247,7 +1247,7 @@ const Particles = memo(function Particles({ count = 12, color = '#d97706' }: { c
   )
 })
 
-function S30_Philosophy() {
+function S38_Philosophy() {
   const lines: { text: string; gradient: string; glow: string }[] = [
     { text: 'Delay expense.', gradient: 'linear-gradient(135deg, #10b981, #34d399)', glow: 'rgba(16,185,129,0.25)' },
     { text: 'Preserve information.', gradient: 'linear-gradient(135deg, #f59e0b, #fbbf24)', glow: 'rgba(245,158,11,0.25)' },
@@ -1429,15 +1429,15 @@ function S30_Philosophy() {
 // ─── Export ──────────────────────────────────────────────────────────────────
 
 export const level3Slides = [
-  S21_QueryLoop,
-  S22_TokenMath,
-  S23_CircuitBreaker,
-  S24_ReactiveCompact,
-  S25_ContextCollapse,
-  S26_APIInvariants,
-  S27_PostCompact,
-  S28_ForkAgent,
-  S29_MemorySecurity,
-  S29_CompleteTree,
-  S30_Philosophy,
+  S28_QueryLoop,
+  S29_TokenMath,
+  S30_CircuitBreaker,
+  S31_ReactiveCompact,
+  S32_ContextCollapse,
+  S33_APIInvariants,
+  S34_PostCompact,
+  S35_ForkAgent,
+  S36_MemorySecurity,
+  S37_CompleteTree,
+  S38_Philosophy,
 ]

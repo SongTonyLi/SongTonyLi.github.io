@@ -1,5 +1,5 @@
 /**
- * Level 1 — The Big Picture (Slides 1-10)
+ * Level 1 — The Big Picture (Slides 1-9)
  * Introduces the problem, the solution, and the 4-layer model.
  */
 
@@ -828,10 +828,10 @@ function S07FourLayersInner() {
 }
 
 
-// ─── Slide 9: Progressive Compression ───────────────────────────────────────
+// ─── Slide 8: Progressive Compression ───────────────────────────────────────
 
-// ── Precomputed chart data for S09 — avoids recalculating on every render ────
-const S09_LEVELS = [
+// ── Precomputed chart data for S08 — avoids recalculating on every render ────
+const S08_LEVELS = [
   { icon: '✂️', name: 'L1 Micro-Compact', desc: 'Rule-based cleanup of old tool outputs', latency: '<1ms', loss: 'Lossless', lossColor: '#10b981', source: 'microCompact.ts', color: '#10b981' },
   { icon: '🎛️', name: 'L2 Auto-Compact Orchestrator', desc: 'Threshold check, circuit breaker, picks strategy', latency: '~0ms', loss: 'None', lossColor: '#10b981', source: 'autoCompact.ts', color: '#3b82f6' },
   { icon: '🧠', name: 'L4 Session Memory', desc: 'Pre-extracted memory as compression summary', latency: '<10ms', loss: 'Medium', lossColor: '#f59e0b', source: 'sessionMemoryCompact.ts', color: '#f59e0b' },
@@ -842,24 +842,24 @@ const S09_LEVELS = [
 const s09tx = (turn: number) => 60 + (turn - 1) * 37.5
 const s09ty = (tokens: number) => 265 - (tokens / 180) * 240
 
-const S09_LINE_DATA: [number, number][] = [
+const S08_LINE_DATA: [number, number][] = [
   [1,15],[2,25],[3,42],[4,55],[5,65],[6,85],[7,115],[8,170],
   [8,53],[9,65],[10,120],[11,170],
   [11,30],[12,70],[13,140],[14,172],[15,175],[16,175],[17,178],[18,180],
   [18,20],[19,35],[20,100],[21,165],
   [21,35],[22,165],[22,52],[23,165],[23,53],[24,165],[24,55],[25,165],[25,60],
 ]
-const S09_PATH_D = S09_LINE_DATA.map(([t, v], i) =>
+const S08_PATH_D = S08_LINE_DATA.map(([t, v], i) =>
   `${i === 0 ? 'M' : 'L'} ${s09tx(t).toFixed(1)},${s09ty(v).toFixed(1)}`
 ).join(' ')
 
-const S09_NORMAL_PTS: [number, number][] = [
+const S08_NORMAL_PTS: [number, number][] = [
   [1,15],[2,25],[3,42],[4,55],[5,65],[6,85],[7,115],[9,65],[10,120],[12,70],[13,140],[19,35],[20,100],
 ]
-const S09_ABOVE_PTS: [number, number][] = [[14,172],[15,175],[16,175],[17,178]]
-const S09_COMPACT_PTS: [number, number][] = [[8,167],[11,167],[18,180],[21,165],[22,165],[23,165],[24,165],[25,165]]
-const S09_FREED_PTS: [number, number][] = [[8,53],[11,30],[18,20],[21,35],[22,52],[23,53],[24,55],[25,60]]
-const S09_DROPS = [
+const S08_ABOVE_PTS: [number, number][] = [[14,172],[15,175],[16,175],[17,178]]
+const S08_COMPACT_PTS: [number, number][] = [[8,167],[11,167],[18,180],[21,165],[22,165],[23,165],[24,165],[25,165]]
+const S08_FREED_PTS: [number, number][] = [[8,53],[11,30],[18,20],[21,35],[22,52],[23,53],[24,55],[25,60]]
+const S08_DROPS = [
   { turn: 8, from: 170, to: 53, label: '-117K' },
   { turn: 11, from: 170, to: 30, label: '-140K' },
   { turn: 18, from: 180, to: 20, label: '-160K' },
@@ -869,21 +869,21 @@ const S09_DROPS = [
   { turn: 24, from: 165, to: 55, label: '110K' },
   { turn: 25, from: 165, to: 60, label: '109K' },
 ] as const
-const S09_COMPACT_TURNS = new Set([8, 9, 11, 18, 19, 21, 22, 23, 24, 25])
-const S09_X_LABELS = [1, 3, 5, 7, 8, 9, 11, 13, 15, 17, 18, 19, 21, 22, 23, 24, 25] as const
+const S08_COMPACT_TURNS = new Set([8, 9, 11, 18, 19, 21, 22, 23, 24, 25])
+const S08_X_LABELS = [1, 3, 5, 7, 8, 9, 11, 13, 15, 17, 18, 19, 21, 22, 23, 24, 25] as const
 
-function S09_ProgressiveCompression() {
-  const levels = S09_LEVELS
+function S08_ProgressiveCompression() {
+  const levels = S08_LEVELS
   const tx = s09tx
   const ty = s09ty
-  const pathD = S09_PATH_D
-  const normalPts = S09_NORMAL_PTS
-  const aboveThresholdPts = S09_ABOVE_PTS
-  const compactPts = S09_COMPACT_PTS
-  const freedPts = S09_FREED_PTS
-  const drops = S09_DROPS
-  const compactTurns = S09_COMPACT_TURNS
-  const xLabels = S09_X_LABELS
+  const pathD = S08_PATH_D
+  const normalPts = S08_NORMAL_PTS
+  const aboveThresholdPts = S08_ABOVE_PTS
+  const compactPts = S08_COMPACT_PTS
+  const freedPts = S08_FREED_PTS
+  const drops = S08_DROPS
+  const compactTurns = S08_COMPACT_TURNS
+  const xLabels = S08_X_LABELS
 
   return (
     <div className="flex flex-col w-full" style={{ gap: '1.2vh' }}>
@@ -1107,9 +1107,9 @@ function S09_ProgressiveCompression() {
   )
 }
 
-// ─── Slide 10: Level Transition ──────────────────────────────────────────────
+// ─── Slide 9: Level Transition ──────────────────────────────────────────────
 
-function S10_GoDeeper() {
+function S09_GoDeeper() {
   return (
     <div className="relative w-full h-full flex flex-col items-center justify-center">
       <Particles count={10} color="#818cf8" />
@@ -1159,6 +1159,6 @@ export const level1Slides = [
   S05_Overflow,
   S06_Answer,
   S07_FourLayers,
-  S09_ProgressiveCompression,
-  S10_GoDeeper,
+  S08_ProgressiveCompression,
+  S09_GoDeeper,
 ]
