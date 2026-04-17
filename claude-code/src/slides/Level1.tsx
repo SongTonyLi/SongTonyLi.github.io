@@ -52,8 +52,6 @@ const Particles = memo(function Particles({ count = 12, color = '#d97706' }: { c
 // ─── Slide 1: Cover ──────────────────────────────────────────────────────────
 
 function S01_Cover() {
-  const [showImg, setShowImg] = useState(false)
-
   return (
     <div className="relative w-full h-full">
       <Particles count={20} />
@@ -79,34 +77,10 @@ function S01_Cover() {
       >
         <p
           className="slide-body"
-          style={{ maxWidth: '65%', cursor: 'pointer' }}
-          onMouseEnter={() => setShowImg(true)}
-          onMouseLeave={() => setShowImg(false)}
+          style={{ maxWidth: '65%' }}
         >
           How Claude Code keeps working when the conversation outgrows the context window.
         </p>
-
-        {/* Terminal error screenshot — pops out on hover */}
-        <div
-          style={{
-            maxWidth: '55vw',
-            marginTop: '1.5vh',
-            opacity: showImg ? 0.85 : 0,
-            transform: showImg ? 'translateY(0) scale(1)' : 'translateY(-8px) scale(0.96)',
-            transition: 'opacity 0.35s ease, transform 0.35s cubic-bezier(0.16, 1, 0.3, 1)',
-            pointerEvents: 'none',
-            border: '1px solid rgba(255,255,255,0.08)',
-            borderRadius: '0.5rem',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
-            overflow: 'hidden',
-          }}
-        >
-          <img
-            src="/compact-error.jpg"
-            alt="Claude Code compact error"
-            style={{ width: '100%', display: 'block' }}
-          />
-        </div>
       </div>
 
       {/* Bottom — author + stats */}
